@@ -1,7 +1,6 @@
 module SMC
 
 using Compat
-# using ExpFamily
 using Distributions
 using LinearAlgebra
 using Statistics
