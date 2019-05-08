@@ -12,14 +12,14 @@ x0 = [0.9, 0, 0, 1, 0, 0]
 
 Random.seed!(123)
 K=120
-N=2000
+N=500
 (states, observations) = generate(armondhmm, x0, K)
 @test norm(states[1,:]) < K
 @test sum(states[2,:])/K < 5
 @test maximum(states[3,:]) <= 1
 @test minimum(states[3,:]) >= 0
 
-display(plot(th.dt*(1:K), states[2,:]))
+#display(plot(th.dt*(1:K), states[2,:]))
 ### test transloglik
 @test isapprox(transll(2,x0,[0.95,-0.01,0,0,1,0]), -Inf) #not possible in one step
 @test transll(2,x0,[1.0,0.0,0,1,0,0]) < 10^3

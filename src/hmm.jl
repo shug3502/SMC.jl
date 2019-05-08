@@ -93,8 +93,8 @@ struct DiscreteState <: GaussianHMM
     function DiscreteState(f, g, R, dimx, dimy)
         @assert issymmetric(R) "cov mat must be symmetric"
         @assert isposdef(R) "cov mat must be pos def"
-        new((k,xkm1)-> f(k,xkm1),
-            (k,xk, ykm1)  -> g(k,xk,ykm1),
+        new((k, xkm1)-> f(k, xkm1),
+            (k, xk, ykm1)  -> g(k, xk, ykm1),
             R, dimx, dimy, cholesky(R).U)
     end
 end
@@ -102,18 +102,18 @@ end
 
 function HMM(g::LinearGaussian)
     transloglik = (k, xkm1, xk) -> -norm(g.cholQ'\(xk - g.transmean(k,xkm1)))^2/2
-    obsloglik   = (k, yk, xk) -> -norm(g.cholR'\(yk - g.obsmean(k,xk)))^2/2
+    obsloglik   = (k, ykm1, yk, xk) -> -norm(g.cholR'\(yk - g.obsmean(k,xk)))^2/2
     HMM(g.transmean, transloglik, g.obsmean, obsloglik, g.dimx, g.dimy)
 end
 
 function HMM(g::NonLinearGaussian, transloglik)
     #set default transloglik as for linear gaussian case, but allow user to specify in more complicated cases
     transloglik = (isnothing(transloglik)) ? (k,xkm1,xk) -> -norm(g.cholQ'\(xk - g.transmean(k,xkm1)))^2/2 : transloglik
-    obsloglik   = (k, yk, xk) -> -norm(g.cholR'\(yk - g.obsmean(k,xk)))^2/2
+    obsloglik   = (k, ykm1, yk, xk) -> -norm(g.cholR'\(yk - g.obsmean(k,xk)))^2/2
     HMM(g.transmean, transloglik, g.obsmean, obsloglik, g.dimx, g.dimy)
 end
 
-function HMM(g::DiscreteState, transloglik, obsloglik)
+function HMM(g::DiscreteState, transloglik)
     obsloglik   = (k, ykm1, yk, xk) -> -norm(g.cholR'\(yk - g.obsmean(k,xk,ykm1)))^2/2
     HMM(g.transmean, transloglik, g.obsmean, obsloglik, g.dimx, g.dimy)
 end
@@ -126,7 +126,7 @@ end
 Generate observations following a given (non)linear Gaussian dynamic for `K`
 time steps.
 """
-function generate(g::NonLinearGaussian, x0::Vector{Float}, y0::Vector{Float}, K::Int
+function generate(g::DiscreteState, x0::Vector{Float}, y0::Vector{Float}, K::Int
                     )::Tuple{Matrix{Float},Matrix{Float}}
     @assert length(x0)==g.dimx "dimensions don't match"
     @assert length(y0)==g.dimy "dimensions don't match"
@@ -135,14 +135,18 @@ function generate(g::NonLinearGaussian, x0::Vector{Float}, y0::Vector{Float}, K:
     # assign first state
     states[:,1] = x0
     observations[:,1] = y0
-    noisey = g.cholR' * randn(noiseDimY,K)
+    states[:,2] = g.transmean(2,states[:,1])
+println(states)
+    noisey = g.cholR' * randn(g.dimy,K)
     # use noise in iterative linear system
     for k = 2:(K-1)
-        observations[:,k] = g.obsmean(k, states[:,k], observations[:,k-1]) + noisey[:k]
+println(k, " of ", K)
+        observations[:,k] = g.obsmean(k, states[:,k], observations[:,k-1]) + noisey[:,k]
+println(observations[:,k])
         states[:,k+1]     = g.transmean(k+1, states[:,k])
     end
     # last observation
-    observations[:,K] = g.obsmean(K, states[:,K]) + noisey[:,K]
+    observations[:,K] = g.obsmean(K, states[:,K], observations[:,K-1]) + noisey[:,K]
     # package and return
     return (states, observations)
 end

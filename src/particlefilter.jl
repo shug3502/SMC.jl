@@ -10,7 +10,7 @@ function particlefilter(hmm::HMM, observations::Matrix{Float}, N::Int,
     psf = ParticleSet(N, hmm.dimx, K)
     ess = zeros(K)
     (p1,e1) = resample( Particles(
-                            [proposal.mu0 + proposal.noise() for i in 1:N],
+                            [proposal.mu0 + proposal.noise(1) for i in 1:N],
                             ones(N)/N),
                         essthresh )
     # store
@@ -20,21 +20,16 @@ function particlefilter(hmm::HMM, observations::Matrix{Float}, N::Int,
     for k=2:K
         pkm1 = psf.p[k-1]
         obsk = observations[:,k]
+        obskm1 = observations[:,k-1] #only used properly for aux filter
 
         logak = zeros(N)
         xk    = similar(pkm1.x)
         # sample (BOOTSTRAP)
         for i in 1:N
-            xk[i]    = proposal.mean(k, pkm1.x[i], obsk) + proposal.noise()
+            xk[i]    = proposal.mean(k, pkm1.x[i], obskm1, obsk) + proposal.noise()
             logak[i] = hmm.transloglik(k, pkm1.x[i], xk[i]) +
-                        hmm.obsloglik(k, obsk, xk[i]) -
-                        proposal.loglik(k, pkm1.x[i], obsk, xk[i])
-#if k==2
-#println(xk[i])
-#println(hmm.transloglik(k, pkm1.x[i], xk[i]))
-#println(proposal.loglik(k, pkm1.x[i], obsk, xk[i]))
-#println(hmm.obsloglik(k, obsk, xk[i]))
-#end
+                        hmm.obsloglik(k, obskm1, obsk, xk[i]) -
+                        proposal.loglik(k, pkm1.x[i], obskm1, obsk, xk[i])
         end
         Wk  = log.(pkm1.w) + logak
         Wk .-= minimum(Wk) # try to avoid underflows

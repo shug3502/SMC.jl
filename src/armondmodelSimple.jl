@@ -2,7 +2,8 @@ using Distributions
 
 export
     thetaSimple,
-    armondModelSimple
+    armondModelSimple,
+    stochasticTransition
 
 #set model parameters
 struct thetaSimple
@@ -16,38 +17,46 @@ struct thetaSimple
     L::Float64
     dt::Float64
 end
+
+function stochasticTransition(prob::Array, nStates::Int)
+#given probabilities of a transition to each of nStates, work out which one to switch to
+    @assert length(prob) == nStates
+    cumProb = cumsum(prob)
+    @assert isapprox(cumProb[nStates],1.0)
+    u = rand()
+    xk = zeros(nStates)
+    for j = 1:nStates
+        if (u<cumProb[j])
+            xk[j] = 1
+            break
+        end
+    end
+    return xk
+end
     
 function armondModelSimple(th=nothing)
     th = (isnothing(th)) ? thetaSimple(450, 0.008, 0.025, -0.035, 0.015, 0.6, 0.9, 0.775, 3.4) : th #set default
     nSisters = 2
     nStates = 4
     angleTheta = 0 #for rotation when in 3D
-    Q = th.dt/th.tau*eye(nSisters) #variance matrix
+    R = th.dt/th.tau*eye(nSisters) #variance matrix
 
     #p_coh and p_icoh instead as per Armond et al 2015 rather than reparameterized
-    p_icoh = theta.p_icoh
-    p_coh = theta.p_icoh
+    p_icoh = th.p_icoh
+    p_coh = th.p_icoh
     q_icoh = 1-p_icoh
     q_coh = 1-p_coh
     P = [p_icoh*p_icoh p_icoh*q_icoh p_icoh*q_icoh q_icoh*q_icoh;
-        p_coh*q_coh p_coh*pcoh q_coh*q_coh p_coh*q_coh;
+        p_coh*q_coh p_coh*p_coh q_coh*q_coh p_coh*q_coh;
         p_coh*q_coh q_coh*q_coh p_coh*p_coh p_coh*q_coh;
-        q_icoh*q_icoh p_icoh*q_icoh p_icoh*q_icoh p_icoh*p*icoh]
+        q_icoh*q_icoh p_icoh*q_icoh p_icoh*q_icoh p_icoh*p_icoh]
 
     function transmean(k, xkm1::Array, theta)
         whichstateprev = findfirst(w -> w>0, xkm1)
         @assert !isnothing(whichstateprev)
         prob = P[whichstateprev,:]
-        cumProb = cumsum(prob) 
-        @assert isapprox(cumProb[4],1.0)
-        u = rand()
-        for j = 1:nStates
-            if (u<cumProb[j])
-                xk = zeros(nStates)
-                xk[j] = 1
-                break
-            end
-        end    
+        xk = stochasticTransition(prob,nStates)
+        @assert sum(xk) > 0 
         return xk
     end
 
@@ -92,16 +101,7 @@ function armondModelSimple(th=nothing)
         b = max(Q)
         prob = exp(Q - b) #subtract for numerical stability
         prob ./= sum(prob) #normalise
-        cumProb = cumsum(prob)
-        @assert isapprox(cumProb[nStates],1.0)
-        u = rand()
-        for j = 1:nStates
-            if (u<cumProb[j])
-                xk = zeros(nStates)
-                xk[j] = 1
-                break
-            end
-        end
+        xk = stochasticTransition(prob,nStates)
         return xk
     end
 

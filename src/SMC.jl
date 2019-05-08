@@ -18,5 +18,6 @@ include("proposal.jl")
 include("particlefilter.jl")
 include("particlesmoother.jl")
 include("armondmodel.jl")
+include("armondmodelSimple.jl")
 
 end # module
