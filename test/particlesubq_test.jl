@@ -1,5 +1,5 @@
-using SMC, Base.Test
-srand(125)
+using SMCaux, Test, Random
+Random.seed!(125)
 
 ## Linear Gaussian
 
@@ -17,15 +17,15 @@ K = 50
 N = 500
 (states, observations) = generate(lg, x0, K)
 
-srand(155)
+Random.seed!(155)
 x00 = x0+randn(dx)/5
 @time kf = kalmanfilter(lg, observations, x00, eye(dx))
 println("KF    : $(norm(kf.means-states)/norm(states))")
-srand(521)
+Random.seed!(521)
 @time ks = kalmansmoother(lg, observations, kf)
 println("KS    : $(norm(ks.means-states)/norm(states))")
 
-srand(155)
+Random.seed!(155)
 @time (psf, ess) = particlefilter(hmm, observations, N, bootstrapprop(lg))
 
 @test length(psf)==K
@@ -39,7 +39,7 @@ end
 @test norm(pfmm-states)/norm(states) < 1.2
 println("PF    : $(norm(pfmm-states)/norm(states))")
 
-srand(521)
+Random.seed!(521)
 @time pslffbs = particlesmoother_lffbs(hmm, psf, 15)
 
 pfm  = mean(pslffbs)
@@ -50,7 +50,7 @@ end
 @test norm(pfmm-states)/norm(states) < 0.9
 println("PSLFBS: $(norm(pfmm-states)/norm(states))")
 
-srand(521)
+Random.seed!(521)
 @time (pslbbis, ess) = particlesmoother_lbbis(hmm, observations,
                                               psf, bootstrapprop(lg))
 
@@ -63,7 +63,7 @@ end
 @test norm(psmm4-states)/norm(states) < 1.
 println("PSBISL: $(norm(psmm4-states)/norm(states))")
 
-srand(521)
+Random.seed!(521)
 @time (psllbbis, ess) = particlesmoother_llbbis(hmm, observations, psf,
                                                 5round(Int,log(N)),
                                                 bootstrapprop(lg))
@@ -77,7 +77,7 @@ end
 @test norm(psmm5-states)/norm(states) < 1.0
 println("PSBISLL: $(norm(psmm5-states)/norm(states))")
 
-srand(521)
+Random.seed!(521)
 @time pss_fh = particlesmoother_fearnhead_lg(lg, observations, psf)
 
 psm  = mean(pss_fh)

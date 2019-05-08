@@ -132,7 +132,7 @@ function particlesmoother_bbis(hmm::HMM, observations::Matrix{Float},
         # normalise weights
         # -- complexity O(N)
         Wk  = log.(psskp1.w) + logak
-        Wk -= minimum(Wk)
+        Wk .-= minimum(Wk)
         wk  = exp.(Wk)
         wk /= sum(wk)
 
@@ -162,7 +162,7 @@ function particlesmoother_bbis(hmm::HMM, observations::Matrix{Float},
     end
     # normalise weights
     Wk  = log.(psskp1.w) + logak
-    Wk -= minimum(Wk)
+    Wk .-= minimum(Wk)
     wk  = exp.(Wk)
     wk /= sum(wk)
 
@@ -217,7 +217,7 @@ function particlesmoother_lbbis(hmm::HMM, observations::Matrix{Float},
         end
         # normalise weights
         Wk  = log.(psskp1.w) + logak
-        Wk -= minimum(Wk)
+        Wk .-= minimum(Wk)
         wk  = exp.(Wk)
         wk /= sum(wk)
 
@@ -246,7 +246,7 @@ function particlesmoother_lbbis(hmm::HMM, observations::Matrix{Float},
     end
     # normalise weights
     Wk  = log.(psskp1.w) + logak
-    Wk -= minimum(Wk)
+    Wk .-= minimum(Wk)
     wk  = exp.(Wk)
     wk /= sum(wk)
 
@@ -308,7 +308,7 @@ function particlesmoother_llbbis(hmm::HMM, observations::Matrix{Float},
         # normalise weights
         # -- complexity O(N)
         Wk  = log.(psskp1.w) + logak - log.(denj)
-        Wk -= minimum(Wk)
+        Wk .-= minimum(Wk)
         wk  = exp.(Wk)
         wk /= sum(wk)
 
@@ -338,7 +338,7 @@ function particlesmoother_llbbis(hmm::HMM, observations::Matrix{Float},
     end
     # normalise weights
     Wk  = log.(psskp1.w) + logak
-    Wk -= minimum(Wk)
+    Wk .-= minimum(Wk)
     wk  = exp.(Wk)
     wk /= sum(wk)
 
@@ -406,7 +406,7 @@ function particlesmoother_fearnhead_lg(lg::LinearGaussian,
     bif_SK  = inv( inv(gamma_S[:,:,K]) + BRiB )
     bif_muK = bif_SK * ( (gamma_S[:,:,K] \ gamma_mu[:, K]) + RiB' * yK )
 
-    noise    = chol(Symmetric(bif_SK))' * randn(lg.dimx, N)
+    noise    = cholesky(Symmetric(bif_SK)).U' * randn(lg.dimx, N)
     bif.p[K] = Particles( [ bif_muK + noise[:,j] for j in 1:N] ,
                           ones(N)/N)
 
@@ -425,7 +425,7 @@ function particlesmoother_fearnhead_lg(lg::LinearGaussian,
         optpropmu_j = [optpropS * QiA' * bif.p[k+1].x[j] for j in 1:N]
 
         # sample from optimal prop
-        noise   = chol(optpropS)' * randn(lg.dimx, N)
+        noise   = cholesky(optpropS).U' * randn(lg.dimx, N)
         samples = [optpropmu_ + optpropmu_j[j] + noise[:,j] for j in 1:N]
 
         # compute γ_k+1 for each x_k+1
@@ -446,7 +446,7 @@ function particlesmoother_fearnhead_lg(lg::LinearGaussian,
     pss.p[1] = deepcopy(bif.p[1])
 
     propS  = Symmetric(inv(Qi + AQiA + BRiB))
-    cpropS = chol(propS)
+    cpropS = cholesky(propS).U
     for k = 2:K-1
         # observation
         yk = observations[:, k]

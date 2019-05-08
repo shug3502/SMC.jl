@@ -5,12 +5,10 @@ function particlefilter(hmm::HMM, observations::Matrix{Float}, N::Int,
                         resampling::Function=multinomialresampling,
                         essthresh::Float=0.5
                         )::Tuple{ParticleSet,Vector{Float}}
-
     K   = size(observations, 2)
     # particle set filter (storage)
     psf = ParticleSet(N, hmm.dimx, K)
     ess = zeros(K)
-
     (p1,e1) = resample( Particles(
                             [proposal.mu0 + proposal.noise() for i in 1:N],
                             ones(N)/N),
@@ -31,12 +29,17 @@ function particlefilter(hmm::HMM, observations::Matrix{Float}, N::Int,
             logak[i] = hmm.transloglik(k, pkm1.x[i], xk[i]) +
                         hmm.obsloglik(k, obsk, xk[i]) -
                         proposal.loglik(k, pkm1.x[i], obsk, xk[i])
+#if k==2
+#println(xk[i])
+#println(hmm.transloglik(k, pkm1.x[i], xk[i]))
+#println(proposal.loglik(k, pkm1.x[i], obsk, xk[i]))
+#println(hmm.obsloglik(k, obsk, xk[i]))
+#end
         end
         Wk  = log.(pkm1.w) + logak
-        Wk -= minimum(Wk) # try to avoid underflows
+        Wk .-= minimum(Wk) # try to avoid underflows
         wk  = exp.(Wk)
         wk /= sum(wk)
-
         (pk, ek) = resample(Particles(xk,wk), essthresh, resampling)
 
         psf.p[k] = pk

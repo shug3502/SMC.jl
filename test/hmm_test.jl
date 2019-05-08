@@ -1,8 +1,8 @@
-using SMC, Base.Test
+using SMCaux, Test, Random, LinearAlgebra
 
 ############################
 
-srand(125)
+Random.seed!(125)
 
 ## Linear Gaussian
 
@@ -18,12 +18,12 @@ x0  = randn(dx)
 
 ### LinearGaussian -- testing the generation
 
-srand(123)
+Random.seed!(123)
 (states, observations) = generate(lg, x0, 3)
 
-srand(123)
-noisex = chol(Q)' * randn(dx, 3)
-noisey = chol(R)' * randn(dy, 3)
+Random.seed!(123)
+noisex = cholesky(Q).U' * randn(dx, 3)
+noisey = cholesky(R).U' * randn(dy, 3)
 state1 = x0
 state2 = A*state1+noisex[:,2] # we do not use the first noise
 state3 = A*state2+noisex[:,3] # since x0 is given
@@ -41,6 +41,6 @@ obs3   = B*state3+noisey[:,3]
 @test isapprox( hmm.transmean(0,state1), A*state1)
 @test isapprox( hmm.obsmean(0,state1), B*state1)
 @test isapprox( hmm.transloglik(0,state1,state2),
-        (-norm(chol(Q)'\(state2-A*state1))^2/2) )
+        (-norm(cholesky(Q).U'\(state2-A*state1))^2/2) )
 @test isapprox( hmm.obsloglik(0,obs2,state2),
-        (-norm(chol(R)'\(  obs2-B*state2))^2/2) )
+        (-norm(cholesky(R).U'\(  obs2-B*state2))^2/2) )

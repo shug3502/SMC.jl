@@ -1,0 +1,4 @@
+name = "SMC"
+uuid = "4b480564-716d-11e9-3ca4-63c5eafa3b5b"
+authors = ["Jonathan Harrison <jonathan.u.harrison@warwick.ac.uk>"]
+version = "0.1.0"

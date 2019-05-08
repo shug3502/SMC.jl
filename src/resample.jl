@@ -1,3 +1,7 @@
+export
+    resample,
+    multinomialresampling
+
 """
     resample(p::Particles, essthresh, rs)
 
@@ -20,7 +24,7 @@ Multinomial resampling of a particles object `p`.
 """
 function multinomialresampling(p::Particles, M::Int=0)::Particles
     N    = length(p)
-    M    = (M>0)? M : N
+    M    = (M>0) ? M : N
     ni   = rand(Multinomial(M, p.w))
     mask = [j for i in 1:N for j in ones(Int,ni[i])*i]
     Particles(p.x[mask], ones(M)/M)

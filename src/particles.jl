@@ -1,7 +1,8 @@
 export
     Particles,
     ParticleSet,
-    multinomialresampling
+    length,
+    mean
 
 const ParticleType = Union{Float, Vector{Float}}
 
@@ -21,7 +22,7 @@ end
 Create a Particles object with `N` particles each of dimension `dx`.
 """
 Particles(N::Int, dx::Int=1) =
-    Particles( dx==1 ? zeros(N) : Vector{Vector{Float}}(N), ones(N)/N )
+    Particles( dx==1 ? zeros(N) : Vector{Vector{Float}}(), ones(N)/N )
 
 """
     ParticleSet(N,dx,K)

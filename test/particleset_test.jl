@@ -1,6 +1,7 @@
-using SMC, Base.Test
+using SMCaux, Test, Random
+using Statistics: var
 
-srand(123)
+Random.seed!(123)
 N = 50000
 x = randn(N)
 w = rand(N); w /= sum(w)
