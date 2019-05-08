@@ -1,4 +1,4 @@
-using SMCaux, Test, Random
+using SMC, Test, Random
 
 include("_legacy_.jl")
 

@@ -1,4 +1,4 @@
-using SMCaux, Test, Random, LinearAlgebra
+using SMC, Test, Random, LinearAlgebra
 
 ############################
 

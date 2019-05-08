@@ -1,4 +1,4 @@
-using SMCaux, Test, Random, LinearAlgebra, Plots
+using SMC, Test, Random, LinearAlgebra, Plots
 using Statistics: var
 
 @testset "particles" begin include("particleset_test.jl")  end

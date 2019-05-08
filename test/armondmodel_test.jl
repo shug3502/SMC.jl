@@ -1,4 +1,4 @@
-using SMCaux, Test, Random, LinearAlgebra, Plots
+using SMC, Test, Random, LinearAlgebra, Plots
 
 Random.seed!(125)
 

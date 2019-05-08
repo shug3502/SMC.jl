@@ -1,4 +1,4 @@
-using SMCaux, Test, Random
+using SMC, Test, Random
 using Statistics: var
 
 Random.seed!(123)

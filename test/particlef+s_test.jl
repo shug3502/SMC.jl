@@ -1,4 +1,4 @@
-using SMCaux, Test, Random
+using SMC, Test, Random
 Random.seed!(125)
 
 ## Linear Gaussian
