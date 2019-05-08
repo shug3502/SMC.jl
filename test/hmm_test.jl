@@ -42,5 +42,5 @@ obs3   = B*state3+noisey[:,3]
 @test isapprox( hmm.obsmean(0,state1), B*state1)
 @test isapprox( hmm.transloglik(0,state1,state2),
         (-norm(cholesky(Q).U'\(state2-A*state1))^2/2) )
-@test isapprox( hmm.obsloglik(0,obs2,state2),
+@test isapprox( hmm.obsloglik(0,nothing,obs2,state2),
         (-norm(cholesky(R).U'\(  obs2-B*state2))^2/2) )

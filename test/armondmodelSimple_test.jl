@@ -19,7 +19,7 @@ N=200
 @test maximum(states[3,:]) <= 1
 @test minimum(states[3,:]) >= 0
 
-display(plot(th.dt*(1:K), states[2,:]))
+#display(plot(th.dt*(1:K), observations[2,:]))
 
 Random.seed!(155)
 #provide exact initial condition x0 here
@@ -28,4 +28,5 @@ auxprop = auxiliaryprop(armondhmmSimple, x0, approxtrans, approxll)
 
 @time (psf, ess) = particlefilter(hmm, observations, N, prop)
 println(ess)
-
+@time (psf, ess) = particlefilter(hmm, observations, N, auxprop)
+println(ess)

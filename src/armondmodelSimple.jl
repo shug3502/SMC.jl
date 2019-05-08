@@ -91,15 +91,15 @@ function armondModelSimple(th=nothing)
         whichstateprev = findfirst(w -> w>0, xkm1)
         @assert !isnothing(whichstateprev)
         prob = P[whichstateprev,:]
-        Q = deepcopy(log(prob)) #this needs to be reweighted appropriately due to conditioning
+        Q = deepcopy(log.(prob)) #this needs to be reweighted appropriately due to conditioning
         for j=1:nStates
             xk = zeros(nStates)
             xk[j] = 1 #potential new state
             Q[j] += logpdf(MvNormal(ykm1 + theta.dt*odeUpdateMatrix(theta)*[ykm1; xk] + theta.dt*odeUpdateVector(theta),
                            sqrt(theta.dt/theta.tau)),yk) #TODO could be more general for non isotropic gaussian
         end
-        b = max(Q)
-        prob = exp(Q - b) #subtract for numerical stability
+        b = maximum(Q)
+        prob = exp.(Q .- b) #subtract for numerical stability
         prob ./= sum(prob) #normalise
         xk = stochasticTransition(prob,nStates)
         return xk
@@ -111,15 +111,15 @@ function armondModelSimple(th=nothing)
         @assert !isnothing(whichstateprev)
         @assert !isnothing(whichstatenext)
         prob = P[whichstateprev,:]
-        Q = deepcopy(log(prob)) #this needs to be reweighted appropriately due to conditioning
+        Q = deepcopy(log.(prob)) #this needs to be reweighted appropriately due to conditioning
         for j=1:nStates
             xk = zeros(nStates)
             xk[j] = 1 #potential new state
             Q[j] += logpdf(MvNormal(ykm1 + theta.dt*odeUpdateMatrix(theta)*[ykm1; xk] + theta.dt*odeUpdateVector(theta),
                            sqrt(theta.dt/theta.tau)),yk) #TODO could be more general for non isotropic gaussian
         end
-        b = max(Q)
-        prob = exp(Q - b) #subtract for numerical stability
+        b = maximum(Q)
+        prob = exp.(Q .- b) #subtract for numerical stability
         prob ./= sum(prob) #normalise
         return log(prob[whichstatenext])
     end

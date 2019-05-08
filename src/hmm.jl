@@ -136,13 +136,10 @@ function generate(g::DiscreteState, x0::Vector{Float}, y0::Vector{Float}, K::Int
     states[:,1] = x0
     observations[:,1] = y0
     states[:,2] = g.transmean(2,states[:,1])
-println(states)
     noisey = g.cholR' * randn(g.dimy,K)
     # use noise in iterative linear system
     for k = 2:(K-1)
-println(k, " of ", K)
         observations[:,k] = g.obsmean(k, states[:,k], observations[:,k-1]) + noisey[:,k]
-println(observations[:,k])
         states[:,k+1]     = g.transmean(k+1, states[:,k])
     end
     # last observation

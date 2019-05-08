@@ -126,7 +126,7 @@ function particlesmoother_bbis(hmm::HMM, observations::Matrix{Float},
             xk[j] = bootstrap.mean(k, psfkm1.x[indices[j]]) + bootstrap.noise()
             # weight update factor
             logak[j] = hmm.transloglik(k, xk[j], psskp1.x[j]) +
-                        hmm.obsloglik(k, obsk, xk[j]) -
+                        hmm.obsloglik(k, nothing, obsk, xk[j]) -
                           log(denj[j])
         end
         # normalise weights
@@ -157,7 +157,7 @@ function particlesmoother_bbis(hmm::HMM, observations::Matrix{Float},
     for j = 1:N
         xk[j]    = bootstrap.mu0 + bootstrap.noise() # sampling from prior
         logak[j] = hmm.transloglik(1, xk[j], psskp1.x[j]) +
-                    hmm.obsloglik(1, obsk, xk[j]) -
+                    hmm.obsloglik(1, nothing, obsk, xk[j]) -
                       log(denj[j])
     end
     # normalise weights
@@ -213,7 +213,7 @@ function particlesmoother_lbbis(hmm::HMM, observations::Matrix{Float},
                       bootstrap.noise()
             # weight update factor p(x_t+1|x_t)p(y_t|x_t)
             logak[j] = hmm.transloglik(k, xk[j], psskp1.x[indices_bwd[j]]) +
-                         hmm.obsloglik(k, obsk, xk[j])
+                         hmm.obsloglik(k, nothing, obsk, xk[j])
         end
         # normalise weights
         Wk  = log.(psskp1.w) + logak
@@ -242,7 +242,7 @@ function particlesmoother_lbbis(hmm::HMM, observations::Matrix{Float},
     for j = 1:N
         xk[j]    = bootstrap.mu0 + bootstrap.noise() # sampling from prior
         logak[j] = hmm.transloglik(1, xk[j], psskp1.x[indices_bwd[j]]) +
-                    hmm.obsloglik(1, obsk, xk[j])
+                    hmm.obsloglik(1, nothing, obsk, xk[j])
     end
     # normalise weights
     Wk  = log.(psskp1.w) + logak
@@ -303,7 +303,7 @@ function particlesmoother_llbbis(hmm::HMM, observations::Matrix{Float},
             xk[j] = bootstrap.mean(k, psfkm1.x[indices[j]]) + bootstrap.noise()
             # weight update factor
             logak[j] = hmm.transloglik(k, xk[j], psskp1.x[j]) +
-                        hmm.obsloglik(k, obsk, xk[j])
+                        hmm.obsloglik(k, nothing, obsk, xk[j])
         end
         # normalise weights
         # -- complexity O(N)
@@ -333,7 +333,7 @@ function particlesmoother_llbbis(hmm::HMM, observations::Matrix{Float},
     for j = 1:N
         xk[j]    = bootstrap.noise() # sampling from prior
         logak[j] = hmm.transloglik(1, xk[j], psskp1.x[j]) +
-                    hmm.obsloglik(1, obsk, xk[j]) -
+                    hmm.obsloglik(1, nothing, obsk, xk[j]) -
                       log(denj[j])
     end
     # normalise weights
