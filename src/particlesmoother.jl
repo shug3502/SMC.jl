@@ -486,7 +486,7 @@ end
 #                                essthresh::Float=0.5
 #                                )::Tuple{ParticleSet,Vector{Float}}
 #     # PASS 1 = particle filter
-#     (pf, ess) = particlefilter(hmm, observations, N, propfwd)
+#     (pf, ess, ev) = particlefilter(hmm, observations, N, propfwd)
 #     # PASS 2 = filter using PF as guide
 #     (ps, ess) = particlesmoother_llbbis(hmm, observations, pf, M, propfwd)
 #     # PASS 3 = filter using PS as guide etc...

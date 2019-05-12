@@ -18,7 +18,7 @@ N = 64
 (states, observations) = generate(lg, x0, K)
 
 Random.seed!(155)
-@time (psf, ess) = particlefilter(hmm, observations, N, bootstrapprop(lg))
+@time (psf, ess, ev) = particlefilter(hmm, observations, N, bootstrapprop(lg))
 
 @test length(psf)==K
 

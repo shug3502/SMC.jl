@@ -4,13 +4,14 @@ function particlefilter(hmm::HMM, observations::Matrix{Float}, N::Int,
                         proposal::Proposal;
                         resampling::Function=multinomialresampling,
                         essthresh::Float=0.5
-                        )::Tuple{ParticleSet,Vector{Float}}
+                        )::Tuple
     K   = size(observations, 2)
     # particle set filter (storage)
     psf = ParticleSet(N, hmm.dimx, K)
     ess = zeros(K)
+    ev = 0
     (p1,e1) = resample( Particles(
-                            [proposal.mu0 + proposal.noise(1) for i in 1:N],
+                            [proposal.mu0 + proposal.noise() for i in 1:N],
                             ones(N)/N),
                         essthresh )
     # store
@@ -32,6 +33,7 @@ function particlefilter(hmm::HMM, observations::Matrix{Float}, N::Int,
                         proposal.loglik(k, pkm1.x[i], obskm1, obsk, xk[i])
         end
         Wk  = log.(pkm1.w) + logak
+        ev += sum(Wk)/N #to compute the likelihood/evidence for p(y|c)
         Wk .-= minimum(Wk) # try to avoid underflows
         wk  = exp.(Wk)
         wk /= sum(wk)
@@ -40,5 +42,5 @@ function particlefilter(hmm::HMM, observations::Matrix{Float}, N::Int,
         psf.p[k] = pk
         ess[k]   = ek
     end
-    (psf, ess)
+    (psf, ess, ev)
 end

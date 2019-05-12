@@ -30,7 +30,7 @@ Random.seed!(155)
 prop = bootstrapprop(armondhmm,x0,transll)
 auxprop = auxiliaryprop(armondhmm, x0, approxtrans, approxll)
 
-@time (psf, ess) = particlefilter(hmm, observations, N, prop)
+@time (psf, ess, ev) = particlefilter(hmm, observations, N, prop)
 println(ess)
 @test length(psf)==K
 #expect bootstrap filter to do badly

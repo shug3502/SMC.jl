@@ -2,7 +2,8 @@ export
     Particles,
     ParticleSet,
     length,
-    mean
+    mean,
+    evidence
 
 const ParticleType = Union{Float, Vector{Float}}
 
@@ -15,6 +16,9 @@ mutable struct ParticleSet{T <: ParticleType}
     p::Vector{Particles{T}} # T
 end
 
+mutable struct ParticleSetTheta{T <: ParticleType}
+    q::Vector{Particles{T}} #Nthet
+end
 
 """
     Particles(N,dx)
@@ -55,8 +59,31 @@ Compute the mean corresponding to the particles `p`.
 mean(p::Particles) = sum(p.x[i] * p.w[i] for i = 1:length(p))
 
 """
-    mean(ps::Particles)
+    mean(ps::ParticleSet)
 
 Compute the mean corresponding to a particle set
 """
 mean(ps::ParticleSet) = [mean(p) for p in ps.p]
+
+"""
+    evidence(p::Particles)
+
+Compute the likelihood p(y | theta) marginalizing over hidden states
+"""
+evidence(p::Particles) = -length(p) + log(sum(p.w[i] for i = 1:length(p)))
+
+"""
+    evidence(ps::ParticleSet)
+
+Compute the likelihood p(y | theta) of a particle set
+"""
+evidence(ps::ParticleSet) = sum([evidence(p) for p in ps.p])
+
+#=
+"""
+  ParticleSetTheta(Ntheta,Nx,dtheta,dx,K)
+Particles in X and Theta
+"""
+ParticleSetTheta(Ntheta::Int,Nx::Int,dtheta::Int,dx::Int,K::Int) = 
+    ParticleSetTheta( [[Particles(Nx,dx) for i in 1:K] for j in 1:Ntheta] )
+=#
