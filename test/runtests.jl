@@ -1,4 +1,5 @@
 using SMC, Test, Random, LinearAlgebra, Plots
+using MCMCChains, StatsPlots
 using Statistics: var
 
 @testset "particles" begin include("particleset_test.jl")  end

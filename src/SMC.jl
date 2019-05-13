@@ -4,6 +4,7 @@ using Compat
 using Distributions
 using LinearAlgebra
 using Statistics
+using Distributed
 import Base.length
 
 const Int   = Int64

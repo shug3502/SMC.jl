@@ -1,4 +1,4 @@
-using Distributions
+using Distributions, Distributed
 
 export
     correlated
@@ -6,12 +6,12 @@ export
 #use correlated pseudo marginal method to gain efficiency compared to pmcmc
 #See deligiannis et al 2018 and golightly et al 2018
 
-function runFilter(theta::Array, u::Array, observations::Array; x0::Array = [0, 1.0, 0, 0], N::Int=100)
+function runFilter(theta::Array, u::Array, observations::Array; x0::Array = [0, 1.0, 0, 0], dt::Float=2.0, N::Int=100)
   @assert length(theta)==2 || length(theta)==8  #TODO: consider better way to provide defaults etc
   if length(theta) == 2
-    th = thetaSimple(450, 0.008, 0.025, -0.015, 0.035, theta[1], theta[2], 0.775, 3.4)
+    th = thetaSimple(450, 0.008, 0.025, -0.015, 0.035, theta[1], theta[2], 0.775, dt)
   else
-    th = thetaSimple(theta[1], theta[2], theta[3], theta[4], theta[5], theta[6], theta[7], theta[8], 3.4)
+    th = thetaSimple(theta[1], theta[2], theta[3], theta[4], theta[5], theta[6], theta[7], theta[8], dt)
   end
   (armondhmmSimple, transll, approxtrans, approxll) = armondModelSimple(th)
   hmm = HMM(armondhmmSimple, transll)
@@ -41,7 +41,6 @@ function correlated(observations::Array, priors::Array,
   for i=2:numIter
     if i%100 == 0
       println("Iter: ", i)
-      println(theta)
       println("acceptance rate is: ", acceptances/i)
     end
     #propose new params
@@ -65,6 +64,6 @@ function correlated(observations::Array, priors::Array,
       c[:,i] = c[:,i-1]
     end
   end
-  return (c, acceptances/numIter)
+  return (transpose(c), acceptances/numIter)
 end
 
