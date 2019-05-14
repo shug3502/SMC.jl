@@ -43,7 +43,7 @@ function armondModelSimple(th=nothing)
 
     #p_coh and p_icoh instead as per Armond et al 2015 rather than reparameterized
     p_icoh = th.p_icoh
-    p_coh = th.p_icoh
+    p_coh = th.p_coh
     q_icoh = 1-p_icoh
     q_coh = 1-p_coh
     P = [p_icoh*p_icoh p_icoh*q_icoh p_icoh*q_icoh q_icoh*q_icoh;
