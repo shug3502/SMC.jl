@@ -1,7 +1,8 @@
 using Distributions, Distributed
 
 export
-    correlated
+    correlated,
+    runFilter
 
 #use correlated pseudo marginal method to gain efficiency compared to pmcmc
 #See deligiannis et al 2018 and golightly et al 2018
@@ -15,8 +16,9 @@ function runFilter(theta::Array, u::Array, observations::Array; x0::Array = [0, 
   end
   (armondhmmSimple, transll, approxtrans, approxll) = armondModelSimple(th)
   hmm = HMM(armondhmmSimple, transll)
-  auxprop = auxiliaryprop(armondhmmSimple, x0, approxtrans, approxll)
-  (psf, ess, ev) = particlefilter(hmm, observations, N, auxprop)
+  prop = bootstrapprop(armondhmmSimple,x0,transll)
+  #auxprop = auxiliaryprop(armondhmmSimple, x0, approxtrans, approxll)
+  (psf, ess, ev) = particlefilter(hmm, observations, N, prop)
   return ev
 end
 

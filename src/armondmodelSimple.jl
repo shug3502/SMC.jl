@@ -35,7 +35,7 @@ function stochasticTransition(prob::Array, nStates::Int)
 end
     
 function armondModelSimple(th=nothing)
-    th = (isnothing(th)) ? thetaSimple(450, 0.008, 0.025, -0.035, 0.015, 0.6, 0.9, 0.775, 3.4) : th #set default
+    th = (isnothing(th)) ? thetaSimple(450, 0.008, 0.025, -0.035, 0.015, 0.6, 0.9, 0.775, 2.0) : th #set default
     nSisters = 2
     nStates = 4
     angleTheta = 0 #for rotation when in 3D

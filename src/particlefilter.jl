@@ -33,7 +33,7 @@ function particlefilter(hmm::HMM, observations::Matrix{Float}, N::Int,
                         proposal.loglik(k, pkm1.x[i], obskm1, obsk, xk[i])
         end
         Wk  = log.(pkm1.w) + logak
-        ev += sum(Wk)/N #to compute the likelihood/evidence for p(y|c)
+        ev += sum(logak)/N #to compute the likelihood/evidence for p(y|c)
         Wk .-= minimum(Wk) # try to avoid underflows
         wk  = exp.(Wk)
         wk /= sum(wk)

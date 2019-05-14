@@ -31,5 +31,5 @@ auxprop = auxiliaryprop(armondhmmSimple, x0, approxtrans, approxll)
 
 @time (psf, ess, ev) = particlefilter(hmm, observations, N, prop)
 @time (psfaux, essaux, evaux) = particlefilter(hmm, observations, N, auxprop)
-@test mean(essaux) > mean(ess) #should get better ESS from auxiliary particle filter
+@test sum(essaux) > sum(ess) #should get better ESS from auxiliary particle filter
 @test (ev < 0) & (evaux < 0) 
