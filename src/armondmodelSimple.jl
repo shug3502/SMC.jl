@@ -61,8 +61,8 @@ function armondModelSimple(th=nothing)
     end
 
     function odeUpdateMatrix(theta)
-        M = [-theta.v_plus -theta.v_plus -theta.v_minus -theta.v_minus (-theta.kappa - theta.alpha) -theta.kappa; 
-            theta.v_plus theta.v_minus theta.v_plus theta.v_minus theta.kappa (-theta.kappa - theta.alpha)]
+        M = [(-theta.kappa - theta.alpha) theta.kappa -theta.v_plus -theta.v_plus -theta.v_minus -theta.v_minus; 
+            theta.kappa (-theta.kappa - theta.alpha) theta.v_plus theta.v_minus theta.v_plus theta.v_minus]
         return M
     end
 

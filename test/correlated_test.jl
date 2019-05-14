@@ -6,7 +6,7 @@ using MCMCChains, StatsPlots, Distributed
 
 Random.seed!(125)
 trueValues = [0.9, 0.98] 
-th = thetaSimple(450, 0.008, 0.025, -0.015, 0.035, trueValues[1], trueValues[2], 0.775, 2.0)
+th = thetaSimple(450, 0.008, 0.025, -0.035, 0.015, trueValues[1], trueValues[2], 0.775, 2.0)
 (armondhmmSimple, transll, approxtrans, approxll) = armondModelSimple(th)
 hmm = HMM(armondhmmSimple, transll)
 x0 = [0, 1.0, 0, 0]
@@ -15,7 +15,7 @@ y0 = [0.9, 0]
 ### testing generation from armond model
 
 Random.seed!(123)
-K=150
+K=500
 (states, observations) = generate(armondhmmSimple, x0, y0, K)
 plot(th.dt*(1:K), transpose(observations))
 savefig("../plots/obs.png")
@@ -29,7 +29,7 @@ paramProposal = [x -> TruncatedNormal(x,0.05,0,1),
 priors = [Beta(2.5,1), Beta(2,1)]
 numIter = 1000
 nChains = 4
-N = 16
+N = 8
 c = zeros(numIter,dimParams,nChains)
 actRate = zeros(nChains)
 @time for i=1:nChains

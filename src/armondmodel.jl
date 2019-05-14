@@ -32,7 +32,7 @@ Q = th.dt/th.tau*eye(2) #variance matrix
 R = tol*eye(2) #assume we observe exactly up to a small tolerance
 
     function odeUpdateMatrix(theta)
-        M = [-theta.v_plus -theta.v_plus -theta.v_minus -theta.v_minus (-theta.kappa - theta.alpha) -theta.kappa; 
+        M = [-theta.v_plus -theta.v_plus -theta.v_minus -theta.v_minus (-theta.kappa - theta.alpha) theta.kappa; 
             theta.v_plus theta.v_minus theta.v_plus theta.v_minus theta.kappa (-theta.kappa - theta.alpha)]
         return M
     end

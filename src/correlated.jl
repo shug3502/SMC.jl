@@ -9,7 +9,7 @@ export
 function runFilter(theta::Array, u::Array, observations::Array; x0::Array = [0, 1.0, 0, 0], dt::Float=2.0, N::Int=100)
   @assert length(theta)==2 || length(theta)==8  #TODO: consider better way to provide defaults etc
   if length(theta) == 2
-    th = thetaSimple(450, 0.008, 0.025, -0.015, 0.035, theta[1], theta[2], 0.775, dt)
+    th = thetaSimple(450, 0.008, 0.025, -0.035, 0.015, theta[1], theta[2], 0.775, dt)
   else
     th = thetaSimple(theta[1], theta[2], theta[3], theta[4], theta[5], theta[6], theta[7], theta[8], dt)
   end
