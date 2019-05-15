@@ -40,7 +40,7 @@ function correlated(observations::Array, priors::Array,
 
   #iterate
   for i=2:numIter
-    if i%100 == 0
+    if i%1000 == 0
       println("Iter: ", i)
       println("acceptance rate is: ", acceptances/i)
     end
