@@ -93,7 +93,7 @@ struct DiscreteState <: GaussianHMM
     function DiscreteState(f, g, R, dimx, dimy)
         @assert issymmetric(R) "cov mat must be symmetric"
         @assert isposdef(R) "cov mat must be pos def"
-        new((k, xkm1)-> f(k, xkm1),
+        new((k, xkm1, u=nothing)-> f(k, xkm1, u),
             (k, xk, ykm1)  -> g(k, xk, ykm1),
             R, dimx, dimy, cholesky(R).U)
     end
@@ -114,7 +114,8 @@ function HMM(g::NonLinearGaussian, transloglik)
 end
 
 function HMM(g::DiscreteState, transloglik)
-    obsloglik   = (k, ykm1, yk, xk) -> -norm(g.cholR'\(yk - g.obsmean(k,xk,ykm1)))^2/2
+#    obsloglik   = (k, ykm1, yk, xk) -> -norm(g.cholR'\(yk - g.obsmean(k,xk,ykm1)))^2/2
+    obsloglik = (k, ykm1, yk, xk) -> logpdf(MvNormal(g.obsmean(k,xk,ykm1),g.R),yk) #need to account for noramlizing constant if want to infer measurement noise
     HMM(g.transmean, transloglik, g.obsmean, obsloglik, g.dimx, g.dimy)
 end
 
@@ -128,6 +129,7 @@ time steps.
 """
 function generate(g::DiscreteState, x0::Vector{Float}, y0::Vector{Float}, K::Int
                     )::Tuple{Matrix{Float},Matrix{Float}}
+#Note: currently no need to pass random numbers through generate. Instead will use default which should sample the random numbers as required.
     @assert length(x0)==g.dimx "dimensions don't match"
     @assert length(y0)==g.dimy "dimensions don't match"
     # allocate states/observations

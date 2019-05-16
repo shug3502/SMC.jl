@@ -15,8 +15,8 @@ function bootstrapprop(g::LinearGaussian, mu0::Union{Float,Vector{Float}}=0.0)
     n = nothing
     Proposal(
         (mu0==0.0) ? (g.dimx>1 ? zeros(g.dimx) : mu0 ) : mu0,
-        (g.dimx>1) ? (k=n)->(g.cholQ'*randn(g.dimx)) : ((k=n)->g.cholQ'*randn()),
-        (k=n,xkm1=n,ykm1=n,yk=n)      -> hmm.transmean(k, xkm1),
+        (g.dimx>1) ? (k=n,u=n)->(g.cholQ'*randn(g.dimx)) : ((k=n,u=n)->g.cholQ'*randn()), #TODO: replace with u right size
+        (k=n,xkm1=n,ykm1=n,yk=n,u=n)      -> hmm.transmean(k, xkm1),
         (k=n,xkm1=n,ykm1=n,yk=n,xk=n) -> hmm.transloglik(k, xkm1, xk)
     )
 end
@@ -32,8 +32,8 @@ function bootstrapprop(g::NonLinearGaussian, mu0::Union{Float,Vector{Float}}=0.0
     end
     Proposal(
         (mu0==0.0) ? (g.dimx>1 ? zeros(g.dimx) : mu0 ) : mu0,
-        (k=n)-> noiseFun(k),
-        (k=n,xkm1=n,ykm1=n,yk=n)      -> hmm.transmean(k, xkm1),
+        (k=n,u=n)-> noiseFun(k), #TODO: replace with u
+        (k=n,xkm1=n,ykm1=n,yk=n,u=n)      -> hmm.transmean(k, xkm1),
         (k=n,xkm1=n,ykm1=n,yk=n,xk=n) -> hmm.transloglik(k, xkm1, xk)
     )
 end
@@ -42,8 +42,8 @@ function bootstrapprop(g::DiscreteState, mu0::Union{Float,Vector{Float}}=0.0, tr
     n = nothing
     Proposal(
         (mu0==0.0) ? (g.dimx>1 ? zeros(g.dimx) : mu0 ) : mu0,
-        (k=n) -> zeros(g.dimx), #no additional noise beyond process noise here
-        (k=n,xkm1=n,ykm1=n,yk=n)      -> g.transmean(k, xkm1),
+        (k=n,u=n) -> zeros(g.dimx), #no additional noise beyond process noise here
+        (k=n,xkm1=n,ykm1=n,yk=n,u=n)      -> g.transmean(k, xkm1, u),
         (k=n,xkm1=n,ykm1=n,yk=n,xk=n) -> transloglik(k, xkm1, xk)
     )
 end
@@ -53,8 +53,8 @@ function auxiliaryprop(g::DiscreteState, mu0::Union{Float,Vector{Float}}=0.0,
     n = nothing
     Proposal(
         (mu0==0.0) ? (g.dimx>1 ? zeros(g.dimx) : mu0 ) : mu0,
-        (k=n) -> zeros(g.dimx), #no additional noise beyond process noise here
-        (k=n,xkm1=n,ykm1=n,yk=n)      -> approxtransmean(k, xkm1, ykm1, yk),
+        (k=n,u=n) -> zeros(g.dimx), #no additional noise beyond process noise here
+        (k=n,xkm1=n,ykm1=n,yk=n,u=n)      -> approxtransmean(k, xkm1, ykm1, yk, u),
         (k=n,xkm1=n,ykm1=n,yk=n,xk=n) -> approxloglik(k, xkm1, ykm1, yk, xk)
     )
 end
@@ -70,8 +70,8 @@ function auxiliaryprop(g::NonLinearGaussian, mu0::Union{Float,Vector{Float}},
     end
     Proposal(
         (mu0==0.0) ? (g.dimx>1 ? zeros(g.dimx) : mu0 ) : mu0,
-        (k=n) -> noiseFun(k),
-        (k=n,xkm1=n,ykm1=n,yk=n)      -> approxtransmean(k, xkm1, yk),
+        (k=n,u=n) -> noiseFun(k), #TODO:update u here too
+        (k=n,xkm1=n,ykm1=n,yk=n,u=n)      -> approxtransmean(k, xkm1, yk),
         (k=n,xkm1=n,ykm1=n,yk=n,xk=n) -> approxloglik(k, xkm1, yk, xk)
     )
 end

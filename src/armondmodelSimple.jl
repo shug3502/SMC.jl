@@ -18,12 +18,12 @@ struct thetaSimple
     dt::Float64
 end
 
-function stochasticTransition(prob::Array, nStates::Int)
+function stochasticTransition(prob::Array, nStates::Int, u)
 #given probabilities of a transition to each of nStates, work out which one to switch to
     @assert length(prob) == nStates
+    u = isnothing(u) ? rand() : u
     cumProb = cumsum(prob)
     @assert isapprox(cumProb[nStates],1.0)
-    u = rand()
     xk = zeros(nStates)
     for j = 1:nStates
         if (u<cumProb[j])
@@ -51,11 +51,11 @@ function armondModelSimple(th=nothing)
         p_coh*q_coh q_coh*q_coh p_coh*p_coh p_coh*q_coh;
         q_icoh*q_icoh p_icoh*q_icoh p_icoh*q_icoh p_icoh*p_icoh]
 
-    function transmean(k, xkm1::Array, theta)
+    function transmean(k, xkm1::Array, u, theta)
         whichstateprev = findfirst(w -> w>0, xkm1)
         @assert !isnothing(whichstateprev)
         prob = P[whichstateprev,:]
-        xk = stochasticTransition(prob,nStates)
+        xk = stochasticTransition(prob,nStates,u)
         @assert sum(xk) > 0 
         return xk
     end
@@ -79,17 +79,16 @@ function armondModelSimple(th=nothing)
     end
 
     function transloglik(k,xkm1,xk,theta)
-    #TODO: check normalizing constants in cases where we care about infering process/observation noise
     whichstateprev = findfirst(w -> w>0, xkm1)
     whichstatenext = findfirst(w -> w>0 , xk)
-    @assert !isnothing(whichstatenext)
+    @assert !isnothing(whichstatenext) "oops: the next state is $whichstatenext since we had $xkm1 and then $xk" 
     transition_prob = P[whichstateprev,whichstatenext] #probability of getting between hidden states for xkm1 and xk   
     return log(transition_prob)
     end
 
-    function approxtransmean(k, xkm1, ykm1, yk, theta)
+    function approxtransmean(k, xkm1, ykm1, yk, theta,u)
         whichstateprev = findfirst(w -> w>0, xkm1)
-        @assert !isnothing(whichstateprev)
+        @assert !isnothing(whichstateprev) "oops the previous state was $xkm1"
         prob = P[whichstateprev,:]
         Q = deepcopy(log.(prob)) #this needs to be reweighted appropriately due to conditioning
         for j=1:nStates
@@ -101,7 +100,7 @@ function armondModelSimple(th=nothing)
         b = maximum(Q)
         prob = exp.(Q .- b) #subtract for numerical stability
         prob ./= sum(prob) #normalise
-        xk = stochasticTransition(prob,nStates)
+        xk = stochasticTransition(prob,nStates,u)
         return xk
     end
 
@@ -124,10 +123,10 @@ function armondModelSimple(th=nothing)
         return log(prob[whichstatenext])
     end
 
-    armondhmmSimple = DiscreteState((k,xk) -> transmean(k,xk,th), (k,xk,ykm1) -> obsmean(k,xk,ykm1,th), R, 4, 2)
+    armondhmmSimple = DiscreteState((k,xk,u=nothing) -> transmean(k,xk,u,th), (k,xk,ykm1) -> obsmean(k,xk,ykm1,th), R, 4, 2)
     transll(k,xkm1,xk) = transloglik(k,xkm1,xk,th)
     approxll(k, xkm1, ykm1, yk, xk) = approxloglik(k, xkm1, ykm1, yk, xk, th)
-    approxtrans(k, xkm1, ykm1, yk) = approxtransmean(k, xkm1, ykm1, yk, th)
+    approxtrans(k, xkm1, ykm1, yk, u=nothing) = approxtransmean(k, xkm1, ykm1, yk, th, u)
 
     return armondhmmSimple, transll, approxtrans, approxll 
 end

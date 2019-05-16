@@ -7,7 +7,8 @@ export
 #use correlated pseudo marginal method to gain efficiency compared to pmcmc
 #See deligiannis et al 2018 and golightly et al 2018
 
-function runFilter(theta::Array, u::Array, observations::Array; x0::Array = [0, 1.0, 0, 0], dt::Float=2.0, N::Int=100)
+function runFilter(theta::Array, u::Union{Array,Nothing}, observations::Array; x0::Array = [0, 1.0, 0, 0],
+                   dt::Float=2.0, N::Int=100, filterMethod::String="Aux")
   @assert length(theta)==2 || length(theta)==8  #TODO: consider better way to provide defaults etc
   if length(theta) == 2
     th = thetaSimple(450, 0.008, 0.025, -0.035, 0.015, theta[1], theta[2], 0.775, dt)
@@ -16,31 +17,48 @@ function runFilter(theta::Array, u::Array, observations::Array; x0::Array = [0, 
   end
   (armondhmmSimple, transll, approxtrans, approxll) = armondModelSimple(th)
   hmm = HMM(armondhmmSimple, transll)
-  auxprop = auxiliaryprop(armondhmmSimple, x0, approxtrans, approxll)
-  (psf, ess, ev) = particlefilter(hmm, observations, N, auxprop)
+  if filterMethod=="Aux"
+    prop = auxiliaryprop(armondhmmSimple, x0, approxtrans, approxll)
+  elseif filterMethod=="Boot"
+    prop = bootstrapprop(armondhmmSimple, x0, transll)
+  else 
+    error("Unknown filter method. Use Aux or Boot instead.")
+  end
+  (psf, ess, ev) = particlefilter(hmm, observations, N, prop, 
+                                  resampling=systematicresampling, u=u)
   return ev
 end
 
 function correlated(observations::Array, priors::Array,
          paramProposal::Array, dimParams::Int, numRandoms::Int;
-         rho::Float=0.9, numIter::Int=1000, N::Int=100)
+         rho::Float=0.9, numIter::Int=1000, N::Int=100,
+         initialisationFn=nothing, printFreq::Int=1000)
   #priors should be an array of distributions
 
   @assert length(priors) == dimParams
   @assert length(paramProposal) == dimParams  
 
-  acceptances = 0
   c = zeros(dimParams,numIter)
-  #i=1 case; set c(1) in the support of prior and draw random numbers
-  for j=1:dimParams
-    c[j,1] = rand(priors[j])
+  #i=1 case; 
+  if isnothing(initialisationFn)
+    #By default, set c(1) in the support of prior
+    for j=1:dimParams
+      c[j,1] = rand(priors[j])
+    end
+  else
+    #for very broad priors a more informative initialisation can be required
+    for j=1:dimParams
+      c[j,1] = rand(initialisationFn[j])
+    end
   end
-  u = randn(numRandoms)
-  lik = runFilter(c[:,1],u,observations,N=N)
+  acceptances = 0
+  u = randn(numRandoms) #draw some random numbers to pass to filter calc
+  uUnif = cdf.(Normal(),u)
+  lik = runFilter(c[:,1],uUnif,observations,N=N)
 
   #iterate
   for i=2:numIter
-    if i%1000 == 0
+    if i%printFreq == 0
       println("Iter: ", i)
       println("acceptance rate is: ", acceptances/i)
     end
@@ -48,11 +66,11 @@ function correlated(observations::Array, priors::Array,
     cPrime = [rand(paramProposal[j](c[j,i-1])) for j in 1:dimParams]
     w = randn(numRandoms)
     uPrime = rho*u + sqrt(1-rho^2)*w
-    #TODO: needs to take in random numbers appropriately
-    likPrime = runFilter(cPrime,uPrime,observations,N=N)
+    uPrimeUnif = cdf.(Normal(),uPrime) #convert from gaussian to uniform
+    likPrime = runFilter(cPrime,uPrimeUnif,observations,N=N)
     acceptanceProb = sum([logpdf(priors[j],cPrime[j]) for j in 1:dimParams]) - 
                      sum([logpdf(priors[j],c[j,i-1]) for j in 1:dimParams]) + 
-                     sum([logpdf(paramProposal[j](c[j,i-1]),c[j,i-1]) for j in 1:dimParams]) - 
+                     sum([logpdf(paramProposal[j](cPrime[j]),c[j,i-1]) for j in 1:dimParams]) - 
                      sum([logpdf(paramProposal[j](c[j,i-1]),cPrime[j]) for j in 1:dimParams]) + 
                      + likPrime - lik
     if log(rand()) < acceptanceProb 
