@@ -18,7 +18,7 @@ struct thetaSimple
     dt::Float64
 end
 
-function stochasticTransition(prob::Array, nStates::Int, u)
+function stochasticTransition(prob::Array{Float}, nStates::Int, u::Union{Array{Float},Nothing})
 #given probabilities of a transition to each of nStates, work out which one to switch to
     @assert length(prob) == nStates
     u = isnothing(u) ? rand() : u
@@ -34,7 +34,7 @@ function stochasticTransition(prob::Array, nStates::Int, u)
     return xk
 end
     
-function armondModelSimple(th=nothing)
+function armondModelSimple(th::Union{Nothing,thetaSimple}=nothing)
     th = (isnothing(th)) ? thetaSimple(450, 0.008, 0.025, -0.035, 0.015, 0.6, 0.9, 0.775, 2.0) : th #set default
     nSisters = 2
     nStates = 4
@@ -51,7 +51,7 @@ function armondModelSimple(th=nothing)
         p_coh*q_coh q_coh*q_coh p_coh*p_coh p_coh*q_coh;
         q_icoh*q_icoh p_icoh*q_icoh p_icoh*q_icoh p_icoh*p_icoh]
 
-    function transmean(k, xkm1::Array, u, theta)
+    function transmean(k::Int, xkm1::Array{Int}, u::Union{Array{Float},Nothing}, P::Array{Float64})
         whichstateprev = findfirst(w -> w>0, xkm1)
         @assert !isnothing(whichstateprev)
         prob = P[whichstateprev,:]
@@ -60,25 +60,25 @@ function armondModelSimple(th=nothing)
         return xk
     end
 
-    function odeUpdateMatrix(theta)
+    function odeUpdateMatrix(theta::thetaSimple)
         M = [(-theta.kappa - theta.alpha) theta.kappa -theta.v_plus -theta.v_plus -theta.v_minus -theta.v_minus; 
             theta.kappa (-theta.kappa - theta.alpha) theta.v_plus theta.v_minus theta.v_plus theta.v_minus]
         return M
     end
 
-    function odeUpdateVector(theta)
+    function odeUpdateVector(theta::thetaSimple)
         mu = [theta.kappa*theta.L*cos(angleTheta); -theta.kappa*theta.L*cos(angleTheta)]
         return mu
     end
 
-    function obsmean(k, xk::Array, ykm1::Array, theta)    
+    function obsmean(k::Int, xk::Array{Int}, ykm1::Array{Float}, theta::thetaSimple)    
     state = [ykm1; xk]
     #forward euler step
     state[1:nSisters] += theta.dt*odeUpdateMatrix(theta)*state + theta.dt*odeUpdateVector(theta)
     return state[1:nSisters]
     end
 
-    function transloglik(k,xkm1,xk,theta)
+    function transloglik(k::Int,xkm1::Array{Int},xk::Array{Int},P::Array{Float})
     whichstateprev = findfirst(w -> w>0, xkm1)
     whichstatenext = findfirst(w -> w>0 , xk)
     @assert !isnothing(whichstatenext) "oops: the next state is $whichstatenext since we had $xkm1 and then $xk" 
@@ -86,11 +86,13 @@ function armondModelSimple(th=nothing)
     return log(transition_prob)
     end
 
-    function approxtransmean(k, xkm1, ykm1, yk, theta,u)
+    function approxtransmean(k::Int, xkm1::Array{Int}, ykm1::Array{Float}, yk::Array{Float}, theta::thetaSimple,
+                             u::Union{Nothing,Array{Float}, P::Array{Float})
         whichstateprev = findfirst(w -> w>0, xkm1)
         @assert !isnothing(whichstateprev) "oops the previous state was $xkm1"
-        prob = P[whichstateprev,:]
-        Q = deepcopy(log.(prob)) #this needs to be reweighted appropriately due to conditioning
+        transition_prob = P[whichstateprev,:]
+        Q = Array{Float}(undef, length(transition_prob))
+        copyto!(Q, log.(transition_prob)) #this needs to be reweighted appropriately due to conditioning
         for j=1:nStates
             xk = zeros(nStates)
             xk[j] = 1 #potential new state
@@ -104,13 +106,14 @@ function armondModelSimple(th=nothing)
         return xk
     end
 
-    function approxloglik(k, xkm1, ykm1, yk, xk, theta)
+    function approxloglik(k::Int, xkm1::Array{Int}, ykm1::Array{Float}, yk::Array{Float}, xk::Array{Int}, theta::thetaSimple, P::Array{Float})
         whichstateprev = findfirst(w -> w>0, xkm1)
         whichstatenext = findfirst(w -> w>0 , xk)
         @assert !isnothing(whichstateprev)
         @assert !isnothing(whichstatenext)
-        prob = P[whichstateprev,:]
-        Q = deepcopy(log.(prob)) #this needs to be reweighted appropriately due to conditioning
+        transition_prob = P[whichstateprev,:]
+        Q = Array{Float}(undef, length(transition_prob))
+        copyto!(Q, log.(transition_prob)) #this needs to be reweighted appropriately due to conditioning
         for j=1:nStates
             xk = zeros(nStates)
             xk[j] = 1 #potential new state
@@ -123,10 +126,10 @@ function armondModelSimple(th=nothing)
         return log(prob[whichstatenext])
     end
 
-    armondhmmSimple = DiscreteState((k,xk,u=nothing) -> transmean(k,xk,u,th), (k,xk,ykm1) -> obsmean(k,xk,ykm1,th), R, 4, 2)
-    transll(k,xkm1,xk) = transloglik(k,xkm1,xk,th)
-    approxll(k, xkm1, ykm1, yk, xk) = approxloglik(k, xkm1, ykm1, yk, xk, th)
-    approxtrans(k, xkm1, ykm1, yk, u=nothing) = approxtransmean(k, xkm1, ykm1, yk, th, u)
+    armondhmmSimple = DiscreteState((k,xk,u=nothing) -> transmean(k,xk,u,P), (k,xk,ykm1) -> obsmean(k,xk,ykm1,th), R, 4, 2)
+    transll(k,xkm1,xk) = transloglik(k,xkm1,xk,P)
+    approxll(k, xkm1, ykm1, yk, xk) = approxloglik(k, xkm1, ykm1, yk, xk, th, P)
+    approxtrans(k, xkm1, ykm1, yk, u=nothing) = approxtransmean(k, xkm1, ykm1, yk, th, u, P)
 
     return armondhmmSimple, transll, approxtrans, approxll 
 end

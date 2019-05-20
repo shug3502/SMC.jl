@@ -5,6 +5,8 @@ using Distributions
 using LinearAlgebra
 using Statistics
 using Distributed
+using Distributed
+using SharedArrays
 import Base.length
 
 const Int   = Int64
