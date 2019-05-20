@@ -18,7 +18,7 @@ struct thetaSimple
     dt::Float64
 end
 
-function stochasticTransition(prob::Array{Float}, nStates::Int, u::Union{Array{Float},Nothing})
+function stochasticTransition(prob::Array{Float}, nStates::Int, u::Union{Array{Float},Float,Nothing})
 #given probabilities of a transition to each of nStates, work out which one to switch to
     @assert length(prob) == nStates
     u = isnothing(u) ? rand() : u
@@ -51,7 +51,7 @@ function armondModelSimple(th::Union{Nothing,thetaSimple}=nothing)
         p_coh*q_coh q_coh*q_coh p_coh*p_coh p_coh*q_coh;
         q_icoh*q_icoh p_icoh*q_icoh p_icoh*q_icoh p_icoh*p_icoh]
 
-    function transmean(k::Int, xkm1::Array{Int}, u::Union{Array{Float},Nothing}, P::Array{Float64})
+    function transmean(k::Int, xkm1::Union{Array{Int},Array{Float}}, u::Union{Array{Float},Nothing}, P::Array{Float64})
         whichstateprev = findfirst(w -> w>0, xkm1)
         @assert !isnothing(whichstateprev)
         prob = P[whichstateprev,:]
@@ -71,14 +71,14 @@ function armondModelSimple(th::Union{Nothing,thetaSimple}=nothing)
         return mu
     end
 
-    function obsmean(k::Int, xk::Array{Int}, ykm1::Array{Float}, theta::thetaSimple)    
+    function obsmean(k::Int, xk::Union{Array{Int},Array{Float}}, ykm1::Array{Float}, theta::thetaSimple)    
     state = [ykm1; xk]
     #forward euler step
     state[1:nSisters] += theta.dt*odeUpdateMatrix(theta)*state + theta.dt*odeUpdateVector(theta)
     return state[1:nSisters]
     end
 
-    function transloglik(k::Int,xkm1::Array{Int},xk::Array{Int},P::Array{Float})
+    function transloglik(k::Int,xkm1::Union{Array{Int},Array{Float}},xk::Union{Array{Int},Array{Float}},P::Array{Float})
     whichstateprev = findfirst(w -> w>0, xkm1)
     whichstatenext = findfirst(w -> w>0 , xk)
     @assert !isnothing(whichstatenext) "oops: the next state is $whichstatenext since we had $xkm1 and then $xk" 
@@ -86,8 +86,8 @@ function armondModelSimple(th::Union{Nothing,thetaSimple}=nothing)
     return log(transition_prob)
     end
 
-    function approxtransmean(k::Int, xkm1::Array{Int}, ykm1::Array{Float}, yk::Array{Float}, theta::thetaSimple,
-                             u::Union{Nothing,Array{Float}, P::Array{Float})
+    function approxtransmean(k::Int, xkm1::Union{Array{Int},Array{Float}}, ykm1::Array{Float}, yk::Array{Float}, theta::thetaSimple,
+                             u::Union{Nothing,Array{Float},Float}, P::Array{Float})
         whichstateprev = findfirst(w -> w>0, xkm1)
         @assert !isnothing(whichstateprev) "oops the previous state was $xkm1"
         transition_prob = P[whichstateprev,:]
@@ -106,7 +106,8 @@ function armondModelSimple(th::Union{Nothing,thetaSimple}=nothing)
         return xk
     end
 
-    function approxloglik(k::Int, xkm1::Array{Int}, ykm1::Array{Float}, yk::Array{Float}, xk::Array{Int}, theta::thetaSimple, P::Array{Float})
+    function approxloglik(k::Int, xkm1::Union{Array{Int},Array{Float}}, ykm1::Array{Float}, yk::Array{Float},
+                          xk::Union{Array{Int},Array{Float}}, theta::thetaSimple, P::Array{Float})
         whichstateprev = findfirst(w -> w>0, xkm1)
         whichstatenext = findfirst(w -> w>0 , xk)
         @assert !isnothing(whichstateprev)

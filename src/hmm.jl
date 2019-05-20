@@ -127,7 +127,7 @@ end
 Generate observations following a given (non)linear Gaussian dynamic for `K`
 time steps.
 """
-function generate(g::DiscreteState, x0::Vector{Float}, y0::Vector{Float}, K::Int
+function generate(g::DiscreteState, x0::Vector{Int}, y0::Vector{Float}, K::Int
                     )::Tuple{Matrix{Float},Matrix{Float}}
 #Note: currently no need to pass random numbers through generate. Instead will use default which should sample the random numbers as required.
     @assert length(x0)==g.dimx "dimensions don't match"
