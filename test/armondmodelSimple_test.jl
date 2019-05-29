@@ -5,7 +5,7 @@ Random.seed!(125)
 th = thetaSimple(450, 0.008, 0.025, -0.035, 0.015, 0.9, 0.98, 0.775, 2.0)
 (armondhmmSimple, transll, approxtrans, approxll) = armondModelSimple(th)
 hmm = HMM(armondhmmSimple, transll)
-x0 = [0, 1.0, 0, 0]
+x0 = [0, 1, 0, 0]
 y0 = [0.9, 0]
 
 ### testing generation from armond model

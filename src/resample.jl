@@ -19,6 +19,45 @@ function resample(p::Particles, essthresh::Float=Inf,
 end
 
 """
+    sortedresample(p::Particles, essthresh, rs, M, u)
+
+Resamples the particle object `p` if the ess is under `essthresh`. The
+resampling algorithm `rs` is for example a stratified resampling.
+First sorts the particles before resampling to allow passing randomness
+through without destroying correlations between the particles.
+Sorting uses a hilbert space filling curve.
+"""
+function sortedresample(p::Particles, essthresh::Float=Inf,
+                        rs::Function=stratifiedresampling, M::Int=0,
+                        u=nothing; nbits = 16
+                        )::Tuple{Particles,Float}
+    ess = 1.0/sum(p.w.^2)
+    N   = length(p)
+    M   = M>0 ? M : N
+    dimx = length(p.x[1])
+
+    #sort before resampling
+#assume binary hidden states
+q = similar(p.x)
+twos = transpose(2 .^(0:(dimx-1)))
+for i=1:N
+q[i] = twos * p.x[i]
+end
+sort!(q); #modifies q -- want indices
+p.x = q
+#=
+    #first transform via hilbert space filling curve
+    qx = zeros(Int,N)
+    for i=1:N
+        qx[i] = hilbert(floor.(Int, p.x[i]*nbits), dimx, nbits)
+    end
+#Nothing this complicated is needed in the case of discrete hidden states where we only have 4 states
+#Just going to map the states to the integers
+=#    
+    (M != N || ess < essthresh * N) ? (rs(p, M, u), ess) : (p, ess)
+end
+
+"""
     multinomialresampling(p::Particles, M, u)
 
 Multinomial resampling of a particles object `p`.

@@ -51,7 +51,7 @@ function armondModelSimple(th::Union{Nothing,thetaSimple}=nothing)
         p_coh*q_coh q_coh*q_coh p_coh*p_coh p_coh*q_coh;
         q_icoh*q_icoh p_icoh*q_icoh p_icoh*q_icoh p_icoh*p_icoh]
 
-    function transmean(k::Int, xkm1::Union{Array{Int},Array{Float}}, u::Union{Array{Float},Nothing}, P::Array{Float64})
+    function transmean(k::Int, xkm1::Union{Array{Int},Array{Float}}, u::Union{Array{Float},Float,Nothing}, P::Array{Float64})
         whichstateprev = findfirst(w -> w>0, xkm1)
         @assert !isnothing(whichstateprev)
         prob = P[whichstateprev,:]
@@ -81,7 +81,7 @@ function armondModelSimple(th::Union{Nothing,thetaSimple}=nothing)
     function transloglik(k::Int,xkm1::Union{Array{Int},Array{Float}},xk::Union{Array{Int},Array{Float}},P::Array{Float})
     whichstateprev = findfirst(w -> w>0, xkm1)
     whichstatenext = findfirst(w -> w>0 , xk)
-    @assert !isnothing(whichstatenext) "oops: the next state is $whichstatenext since we had $xkm1 and then $xk" 
+    @assert !isnothing(whichstatenext) "oops: the next state is Nothing" ### since we had $xkm1 and then $xk" 
     transition_prob = P[whichstateprev,whichstatenext] #probability of getting between hidden states for xkm1 and xk   
     return log(transition_prob)
     end

@@ -4,7 +4,7 @@ export
     auxiliaryprop
 
 struct Proposal
-    mu0::Union{Float,Vector{Float}}
+    mu0::Union{Float,Vector{Float},Vector{Int}}
     noise::Function
     mean::Function
     loglik::Function
@@ -38,7 +38,7 @@ function bootstrapprop(g::NonLinearGaussian, mu0::Union{Float,Vector{Float}}=0.0
     )
 end
 
-function bootstrapprop(g::DiscreteState, mu0::Union{Float,Vector{Float}}=0.0, transloglik::Function=nothing)
+function bootstrapprop(g::DiscreteState, mu0::Union{Float,Vector{Float},Vector{Int}}=0.0, transloglik::Function=nothing)
     n = nothing
     Proposal(
         (mu0==0.0) ? (g.dimx>1 ? zeros(g.dimx) : mu0 ) : mu0,
@@ -48,7 +48,7 @@ function bootstrapprop(g::DiscreteState, mu0::Union{Float,Vector{Float}}=0.0, tr
     )
 end
 
-function auxiliaryprop(g::DiscreteState, mu0::Union{Float,Vector{Float}}=0.0, 
+function auxiliaryprop(g::DiscreteState, mu0::Union{Float,Vector{Float},Vector{Int}}=0.0, 
                        approxtransmean::Function=nothing, approxloglik::Function=nothing)
     n = nothing
     Proposal(

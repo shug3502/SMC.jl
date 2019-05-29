@@ -7,6 +7,7 @@ using Statistics
 using Distributed
 using Distributed
 using SharedArrays
+using HilbertSpaceFillingCurve
 import Base.length
 
 const Int   = Int64
