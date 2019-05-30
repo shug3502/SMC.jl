@@ -5,7 +5,8 @@ export particlefilter,
 function particlefilter(hmm::HMM, observations::Matrix{Float}, N::Int,
                         proposal::Proposal;
                         resampling::Function=multinomialresampling,
-                        essthresh::Float=0.5, u=nothing
+                        essthresh::Float=0.5, u=nothing,
+                        resampler::Function=resample 
                         )::Tuple
     #can choose to pass random numbers for particle filter to use via u
     K = size(observations, 2)
@@ -15,7 +16,7 @@ function particlefilter(hmm::HMM, observations::Matrix{Float}, N::Int,
     psf = ParticleSet(N, hmm.dimx, K)
     ess = zeros(K)
     ev = 0
-    (p1,e1) = resample( Particles(
+    (p1,e1) = resampler( Particles(
                             [proposal.mu0 + proposal.noise() for i in 1:N],
                             ones(N)/N),
                         essthresh, resampling, 0, u[1])
@@ -44,7 +45,7 @@ function particlefilter(hmm::HMM, observations::Matrix{Float}, N::Int,
         Wk .-= minimum(Wk) # try to avoid underflows
         wk  = exp.(Wk)
         wk /= sum(wk)
-        (pk, ek) = resample(Particles(xk,wk), essthresh, resampling, 0, u[K*(N+1)-(k-2)])
+        (pk, ek) = resampler(Particles(xk,wk), essthresh, resampling, 0, u[K*(N+1)-(k-2)])
 
         psf.p[k] = pk
         ess[k]   = ek

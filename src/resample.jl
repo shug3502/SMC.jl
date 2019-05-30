@@ -1,5 +1,6 @@
 export
     resample,
+    sortedresample,
     multinomialresampling,
     systematicresampling
 """
@@ -37,14 +38,16 @@ function sortedresample(p::Particles, essthresh::Float=Inf,
     dimx = length(p.x[1])
 
     #sort before resampling
-#assume binary hidden states
-q = similar(p.x)
-twos = transpose(2 .^(0:(dimx-1)))
-for i=1:N
-q[i] = twos * p.x[i]
-end
-sort!(q); #modifies q -- want indices
-p.x = q
+    #assume binary hidden states
+    q = zeros(N) #similar(p.x)
+    twos = transpose(2 .^(0:(dimx-1)))
+    for i=1:N
+        q[i] = twos * p.x[i]
+    end
+    #compute indices and use these to sort the particles
+    sortedIndx = convert(Array{Int},sortslices(hcat(q, 1:N), dims = 1, by = x -> x[1])[:,2])
+    p.x = p.x[sortedIndx]
+    p.w = p.w[sortedIndx]
 #=
     #first transform via hilbert space filling curve
     qx = zeros(Int,N)

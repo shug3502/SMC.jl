@@ -8,7 +8,7 @@ export
 #See deligiannis et al 2018 and golightly et al 2018
 
 function runFilter(theta::Array, u::Union{Array,Nothing}, observations::Array; x0::Array = [0, 1.0, 0, 0],
-                   dt::Float=2.0, N::Int=100, filterMethod::String="Aux")
+                   dt::Float=2.0, N::Int=100, filterMethod::String="Aux", resampler::Function=resample)
   @assert length(theta)==2 || length(theta)==8  #TODO: consider better way to provide defaults etc
   if length(theta) == 2
     th = thetaSimple(450, 0.008, 0.025, -0.035, 0.015, theta[1], theta[2], 0.775, dt)
@@ -25,14 +25,15 @@ function runFilter(theta::Array, u::Union{Array,Nothing}, observations::Array; x
     error("Unknown filter method. Use Aux or Boot instead.")
   end
   (psf, ess, ev) = particlefilter(hmm, observations, N, prop, 
-                                  resampling=systematicresampling, u=u)
+                                  resampling=systematicresampling, u=u, resampler=resampler)
   return ev
 end
 
 function correlated(observations::Array, priors::Array,
          paramProposal::Array, dimParams::Int, numRandoms::Int;
          rho::Float=0.9, numIter::Int=1000, N::Int=100,
-         initialisationFn=nothing, printFreq::Int=1000)
+         initialisationFn=nothing, printFreq::Int=1000,
+         resampler::Function=resample)
   #priors should be an array of distributions
 
   @assert length(priors) == dimParams
@@ -54,7 +55,7 @@ function correlated(observations::Array, priors::Array,
   acceptances = 0
   u = randn(numRandoms) #draw some random numbers to pass to filter calc
   uUnif = cdf.(Normal(),u)
-  lik = runFilter(c[:,1],uUnif,observations,N=N)
+  lik = runFilter(c[:,1],uUnif,observations,N=N,resampler=resampler)
 
   #iterate
   for i=2:numIter
@@ -67,7 +68,7 @@ function correlated(observations::Array, priors::Array,
     w = randn(numRandoms)
     uPrime = rho*u + sqrt(1-rho^2)*w
     uPrimeUnif = cdf.(Normal(),uPrime) #convert from gaussian to uniform
-    likPrime = runFilter(cPrime,uPrimeUnif,observations,N=N)
+    likPrime = runFilter(cPrime,uPrimeUnif,observations,N=N,resampler=resampler)
     acceptanceProb = sum([logpdf(priors[j],cPrime[j]) for j in 1:dimParams]) - 
                      sum([logpdf(priors[j],c[j,i-1]) for j in 1:dimParams]) + 
                      sum([logpdf(paramProposal[j](cPrime[j]),c[j,i-1]) for j in 1:dimParams]) - 
