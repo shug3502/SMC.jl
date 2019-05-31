@@ -36,9 +36,9 @@ end
     
 function armondModelSimple(th::Union{Nothing,thetaSimple}=nothing)
     th = (isnothing(th)) ? thetaSimple(450, 0.008, 0.025, -0.035, 0.015, 0.6, 0.9, 0.775, 2.0) : th #set default
-    nSisters = 2
-    nStates = 4
-    angleTheta = 0 #for rotation when in 3D
+    nSisters = convert(Int,2)
+    nStates = convert(Int,4)
+    angleTheta = convert(Float,0) #for rotation when in 3D
     R = th.dt/th.tau*eye(nSisters) #variance matrix
 
     #p_coh and p_icoh instead as per Armond et al 2015 rather than reparameterized
@@ -86,8 +86,8 @@ function armondModelSimple(th::Union{Nothing,thetaSimple}=nothing)
     return log(transition_prob)
     end
 
-    function approxtransmean(k::Int, xkm1::Union{Array{Int},Array{Float}}, ykm1::Array{Float}, yk::Array{Float}, theta::thetaSimple,
-                             u::Union{Nothing,Array{Float},Float}, P::Array{Float})
+    function approxtransmean(k::Int, xkm1::Union{AbstractArray{Int},AbstractArray{Float}}, ykm1::AbstractArray{Float}, yk::AbstractArray{Float}, theta::thetaSimple,
+                             u::Union{Nothing,AbstractArray{Float},Float}, P::AbstractArray{Float})
         whichstateprev = findfirst(w -> w>0, xkm1)
         @assert !isnothing(whichstateprev) "oops the previous state was $xkm1"
         transition_prob = P[whichstateprev,:]
@@ -127,7 +127,7 @@ function armondModelSimple(th::Union{Nothing,thetaSimple}=nothing)
         return log(prob[whichstatenext])
     end
 
-    armondhmmSimple = DiscreteState((k,xk,u=nothing) -> transmean(k,xk,u,P), (k,xk,ykm1) -> obsmean(k,xk,ykm1,th), R, 4, 2)
+    armondhmmSimple = DiscreteState((k,xk,u=nothing) -> transmean(k,xk,u,P), (k,xk,ykm1) -> obsmean(k,xk,ykm1,th), R, convert(Int,4), convert(Int,2))
     transll(k,xkm1,xk) = transloglik(k,xkm1,xk,P)
     approxll(k, xkm1, ykm1, yk, xk) = approxloglik(k, xkm1, ykm1, yk, xk, th, P)
     approxtrans(k, xkm1, ykm1, yk, u=nothing) = approxtransmean(k, xkm1, ykm1, yk, th, u, P)

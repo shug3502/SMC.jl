@@ -25,7 +25,7 @@ function particlefilter(hmm::HMM, observations::Matrix{Float}, N::Int,
     psf.p[1] = p1
     ess[1]   = e1
 
-    for k=2:K
+    for k=convert(Array{Int},2:K)
         pkm1 = psf.p[k-1]
         obsk = observations[:,k]
         obskm1 = observations[:,k-1] #only used properly for aux filter
@@ -34,7 +34,7 @@ function particlefilter(hmm::HMM, observations::Matrix{Float}, N::Int,
 
         # sample (BOOTSTRAP)
 
-        for i in 1:N
+        for i in convert(Array{Int},1:N)
             xk[i]    = proposal.mean(k, pkm1.x[i], obskm1, obsk, u[(k-1)*N+i]) + proposal.noise(k,u[(k-1)*N+i]) #pass a single random number to the fwd simulation
             logak[i] = hmm.transloglik(k, pkm1.x[i], xk[i]) +
                         hmm.obsloglik(k, obskm1, obsk, xk[i]) -

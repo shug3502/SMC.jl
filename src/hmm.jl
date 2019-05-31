@@ -133,16 +133,16 @@ function generate(g::DiscreteState, x0::Union{Vector{Int},Vector{Float}}, y0::Ve
     @assert length(x0)==g.dimx "dimensions don't match"
     @assert length(y0)==g.dimy "dimensions don't match"
     # allocate states/observations
-    states, observations = zeros(g.dimx, K), zeros(g.dimy, K)
+    states, observations = zeros(Int,g.dimx, K), zeros(Float,g.dimy, K)
     # assign first state
     states[:,1] = x0
     observations[:,1] = y0
-    states[:,2] = g.transmean(2,states[:,1])
+    states[:,2] = g.transmean(convert(Int,2),states[:,1])
     noisey = g.cholR' * randn(g.dimy,K)
     # use noise in iterative linear system
-    for k = 2:(K-1)
+    for k = convert(Array{Int},2:(K-1))
         observations[:,k] = g.obsmean(k, states[:,k], observations[:,k-1]) + noisey[:,k]
-        states[:,k+1]     = g.transmean(k+1, states[:,k])
+        states[:,k+1]     = g.transmean(k+convert(Int,1), states[:,k])
     end
     # last observation
     observations[:,K] = g.obsmean(K, states[:,K], observations[:,K-1]) + noisey[:,K]
