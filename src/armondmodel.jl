@@ -9,15 +9,15 @@ export
 
 #set model parameters
 struct theta
-    tau::Float64
-    alpha::Float64
-    kappa::Float64
-    v_minus::Float64
-    v_plus::Float64
-    k_icoh::Float64
-    k_coh::Float64
-    L::Float64
-    dt::Float64
+    tau::Float
+    alpha::Float
+    kappa::Float
+    v_minus::Float
+    v_plus::Float
+    k_icoh::Float
+    k_coh::Float
+    L::Float
+    dt::Float
 end
 
 function armondModel(th=nothing)

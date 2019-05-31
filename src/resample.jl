@@ -1,6 +1,7 @@
 export
     resample,
     sortedresample,
+    maxcouplingresample,
     multinomialresampling,
     systematicresampling
 """
@@ -26,11 +27,11 @@ Resamples the particle object `p` if the ess is under `essthresh`. The
 resampling algorithm `rs` is for example a stratified resampling.
 First sorts the particles before resampling to allow passing randomness
 through without destroying correlations between the particles.
-Sorting uses a hilbert space filling curve.
+Project from binary hidden states to a line to enable sorting.
 """
 function sortedresample(p::Particles, essthresh::Float=Inf,
                         rs::Function=stratifiedresampling, M::Int=0,
-                        u=nothing; nbits = 16
+                        u=nothing
                         )::Tuple{Particles,Float}
     ess = 1.0/sum(p.w.^2)
     N   = length(p)
@@ -38,7 +39,7 @@ function sortedresample(p::Particles, essthresh::Float=Inf,
     dimx = length(p.x[1])
 
     #sort before resampling
-    #assume binary hidden states
+    #assume binary hidden states; to do this for real state space use transform from Hilbert Space Filling Curve
     q = zeros(N) #similar(p.x)
     twos = transpose(2 .^(0:(dimx-1)))
     for i=1:N
@@ -48,16 +49,61 @@ function sortedresample(p::Particles, essthresh::Float=Inf,
     sortedIndx = convert(Array{Int},sortslices(hcat(q, 1:N), dims = 1, by = x -> x[1])[:,2])
     p.x = p.x[sortedIndx]
     p.w = p.w[sortedIndx]
-#=
-    #first transform via hilbert space filling curve
-    qx = zeros(Int,N)
-    for i=1:N
-        qx[i] = hilbert(floor.(Int, p.x[i]*nbits), dimx, nbits)
-    end
-#Nothing this complicated is needed in the case of discrete hidden states where we only have 4 states
-#Just going to map the states to the integers
-=#    
     (M != N || ess < essthresh * N) ? (rs(p, M, u), ess) : (p, ess)
+end
+
+"""
+    maxcouplingresample(pkm1::Particles, pk::Particles, essthresh, rs, M, u)
+
+Resamples the particle object `p` if the ess is under `essthresh`. The
+resampling algorithm `rs` is for example a stratified resampling.
+Couples between previous particles and new particles via max coupling scheme. 
+See Sen et al 2018 Stat. Comput for description.
+"""
+function maxcouplingresample(pkm1::Particles, pk::Particles, essthresh::Float=Inf,
+                        rs::Function=stratifiedresampling, M::Int=0,
+                        u=nothing
+                        )::Tuple{Particles,Particles,Float}
+#println("In max resampler")
+    ess = 1.0/sum(pkm1.w.^2)
+    N = length(pkm1)
+    @assert length(pk) == N
+    M   = M>0 ? M : N
+    p = 0.0
+    mu = zeros(N)
+    mu1 = zeros(N)
+    mu2 = zeros(N)
+    for i=1:N
+        mu[i] = min(pkm1.w[i],pk.w[i])
+        p += mu[i]
+        mu1[i] = pkm1.w[i] - mu[i]
+        mu2[i] = pk.w[i] - mu[i]
+    end
+    @assert p != 0 "Should be ok in this case but should check just in case"
+    mu /= p #normalize
+    mu1 /= 1-p
+    mu2 /= 1-p
+#println("p: $p")
+#println("mu")
+#println(mu)
+#println("mu1")
+#println(mu1)
+#println("mu2")
+#println(mu2)
+    r = rand(M) #independent source of randomness
+    Y = zeros(N)
+    Z = zeros(N)
+    if (M != N || ess < essthresh * N)
+        coupled = rs(Particles(pkm1.x, mu), M, u)
+        Yuncoupled = rs(Particles(pkm1.x,mu1),M,u)
+        Zuncoupled = rs(Particles(pk.x,mu2),M,u)
+        pkm1.w = ones(M)/M
+        pk.w = ones(M)/M
+        for i=1:N
+            (pkm1.x[i], pk.x[i]) = (r[i]<p) ? (coupled.x[i],coupled.x[i]) : (Yuncoupled.x[i], Zuncoupled.x[i])
+        end
+    end
+    return (pkm1, pk, ess)
 end
 
 """
@@ -81,10 +127,15 @@ Helpful when wanting to correlate randomness in successive filter evaluations.
 """
 function systematicresampling(p::Particles, M::Int=0, u=nothing)::Particles
     #based on MATLAB code from https://uk.mathworks.com/matlabcentral/fileexchange/24968-resampling-methods-for-particle-filtering
+#println("In systematic resampler")
     u = isnothing(u) ? rand() : u #sample if nothing supplied
     N = length(p.w);
     M = (M>0) ? M : N
     Q = cumsum(p.w);
+    if !isapprox(Q[N],1)
+#        println( "oops degenerate weights: $Q")
+        return Particles(p.x,ones(M)/M)
+    end
     T = [range(0,stop=1-1/N,length=N) .+ u/N; 1];
     i=1;
     j=1;
@@ -97,5 +148,5 @@ function systematicresampling(p::Particles, M::Int=0, u=nothing)::Particles
             j+=1;        
         end
     end
-    Particles(p.x[indx], ones(M)/M)
+    return Particles(p.x[indx], ones(M)/M)
 end

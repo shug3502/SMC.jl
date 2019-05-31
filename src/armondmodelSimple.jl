@@ -7,15 +7,15 @@ export
 
 #set model parameters
 struct thetaSimple
-    tau::Float64
-    alpha::Float64
-    kappa::Float64
-    v_minus::Float64
-    v_plus::Float64
-    p_icoh::Float64
-    p_coh::Float64
-    L::Float64
-    dt::Float64
+    tau::Float
+    alpha::Float
+    kappa::Float
+    v_minus::Float
+    v_plus::Float
+    p_icoh::Float
+    p_coh::Float
+    L::Float
+    dt::Float
 end
 
 function stochasticTransition(prob::Array{Float}, nStates::Int, u::Union{Array{Float},Float,Nothing})
@@ -51,7 +51,7 @@ function armondModelSimple(th::Union{Nothing,thetaSimple}=nothing)
         p_coh*q_coh q_coh*q_coh p_coh*p_coh p_coh*q_coh;
         q_icoh*q_icoh p_icoh*q_icoh p_icoh*q_icoh p_icoh*p_icoh]
 
-    function transmean(k::Int, xkm1::Union{Array{Int},Array{Float}}, u::Union{Array{Float},Float,Nothing}, P::Array{Float64})
+    function transmean(k::Int, xkm1::Union{Array{Int},Array{Float}}, u::Union{Array{Float},Float,Nothing}, P::Array{Float})
         whichstateprev = findfirst(w -> w>0, xkm1)
         @assert !isnothing(whichstateprev)
         prob = P[whichstateprev,:]

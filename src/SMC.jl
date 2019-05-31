@@ -9,8 +9,8 @@ using Distributed
 using SharedArrays
 import Base.length
 
-const Int   = Int64
-const Float = Float64
+const Int   = Int32
+const Float = Float32
 
 include("hmm.jl")
 include("kalman.jl")

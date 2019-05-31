@@ -2,7 +2,8 @@ using Distributions, Distributed
 
 export
     correlated,
-    runFilter
+    runFilter,
+    runCoupledFilter
 
 #use correlated pseudo marginal method to gain efficiency compared to pmcmc
 #See deligiannis et al 2018 and golightly et al 2018
@@ -28,6 +29,36 @@ function runFilter(theta::Array, u::Union{Array,Nothing}, observations::Array; x
                                   resampling=systematicresampling, u=u, resampler=resampler)
   return ev
 end
+
+function runCoupledFilter(theta1::Array, theta2::Array, u1::Union{Array,Nothing}, u2::Union{Array,Nothing},
+                   observations::Array; x0::Array = [0, 1.0, 0, 0],
+                   dt::Float=2.0, N::Int=100, filterMethod::String="Aux")
+  @assert length(theta1)==2 || length(theta1)==8  #TODO: consider better way to provide defaults etc
+  if length(theta1) == 2
+    th1 = thetaSimple(450, 0.008, 0.025, -0.035, 0.015, theta1[1], theta1[2], 0.775, dt)
+    th2 = thetaSimple(450, 0.008, 0.025, -0.035, 0.015, theta2[1], theta2[2], 0.775, dt)
+  else
+    th1 = thetaSimple(theta1[1], theta1[2], theta1[3], theta1[4], theta1[5], theta1[6], theta1[7], theta1[8], dt)
+    th2 = thetaSimple(theta2[1], theta2[2], theta2[3], theta2[4], theta2[5], theta2[6], theta2[7], theta2[8], dt)
+  end
+  (armondhmmSimple1, transll1, approxtrans1, approxll1) = armondModelSimple(th1)
+  (armondhmmSimple2, transll2, approxtrans2, approxll2) = armondModelSimple(th2)
+  hmm1 = HMM(armondhmmSimple1, transll1)
+  hmm2 = HMM(armondhmmSimple2, transll2)
+  if filterMethod=="Aux"
+    prop1 = auxiliaryprop(armondhmmSimple1, x0, approxtrans1, approxll1)
+    prop2 = auxiliaryprop(armondhmmSimple2, x0, approxtrans2, approxll2)
+  elseif filterMethod=="Boot"
+    prop1 = bootstrapprop(armondhmmSimple1, x0, transll1)
+    prop2 = bootstrapprop(armondhmmSimple2, x0, transll2)
+  else
+    error("Unknown filter method. Use Aux or Boot instead.")
+  end
+  (psf1, psf2, ess, evdiff) = coupledparticlefilter(hmm1, hmm2, observations, N, prop1, prop2,
+                                  resampling=systematicresampling, u1=u1, u2=u2, resampler=maxcouplingresample)
+  return evdiff
+end
+
 
 function correlated(observations::Array, priors::Array,
          paramProposal::Array, dimParams::Int, numRandoms::Int;
