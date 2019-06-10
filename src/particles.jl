@@ -65,3 +65,22 @@ Compute the mean corresponding to a particle set
 mean(ps::ParticleSet) = [mean(p) for p in ps.p]
 
 
+"""
+    samplehiddenstate(ps::ParticleSet)
+
+Draw a sample $$X_{1:T} \sim \hat{p}_{\theta}(\cdot | y_{1:T}).$$
+"""
+function samplehiddenstate(ps)
+# ***TODO: implement this somewhere: will need to store the ancestor variables ***
+#the functions in src/particlesmoother.jl may be a better solution as may provide a reweighted collection of particles to solve the smoothing problem rather than a single particle
+    K = length(ps)
+    dimx = length(ps.p[1].x)
+    xsample = zeros(dimx)
+
+    for k=(K):-1:1
+        #define categorical distribution based on weights at kth time pt        
+        indx = rand(Categorical(ps.p[k].w)) 
+        xsample[k] = ps.p[k].x[indx]
+    end
+end
+

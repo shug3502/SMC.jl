@@ -56,7 +56,7 @@ end
 
 function coupledparticlefilter(hmm1::HMM, hmm2::HMM, observations::Matrix{Float}, N::Int,
                         proposal1::Proposal, proposal2::Proposal;
-                        resampling::Function=multinomialresampling,
+                        resampling::Function=stratifiedresampling,
                         essthresh::Float=0.5, u1=nothing, u2=nothing,
                         resampler::Function=maxcouplingresample 
                         )::Tuple

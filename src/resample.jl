@@ -17,7 +17,7 @@ function resample(p::Particles, essthresh::Float=Inf,
     ess = 1.0/sum(p.w.^2)
     N   = length(p)
     M   = M>0 ? M : N
-    (M != N || ess < essthresh * N) ? (rs(p, M, u), ess) : (p, ess)
+    (M != N || ess < essthresh * N) ? (rs(p, M, u)..., ess) : (p, 1:N, ess)
 end
 
 """
@@ -49,7 +49,7 @@ function sortedresample(p::Particles, essthresh::Float=Inf,
     sortedIndx = convert(Array{Int},sortslices(hcat(q, 1:N), dims = 1, by = x -> x[1])[:,2])
     p.x = p.x[sortedIndx]
     p.w = p.w[sortedIndx]
-    (M != N || ess < essthresh * N) ? (rs(p, M, u), ess) : (p, ess)
+    (M != N || ess < essthresh * N) ? (rs(p, M, u)..., ess) : (p, 1:N, ess)
 end
 
 """
@@ -64,7 +64,6 @@ function maxcouplingresample(pkm1::Particles, pk::Particles, essthresh::Float=In
                         rs::Function=stratifiedresampling, M::Int=0,
                         u=nothing
                         )::Tuple{Particles,Particles,Float}
-#println("In max resampler")
     ess = 1.0/sum(pkm1.w.^2)
     N = length(pkm1)
     @assert length(pk) == N
@@ -83,27 +82,22 @@ function maxcouplingresample(pkm1::Particles, pk::Particles, essthresh::Float=In
     mu /= p #normalize
     mu1 /= 1-p
     mu2 /= 1-p
-#println("p: $p")
-#println("mu")
-#println(mu)
-#println("mu1")
-#println(mu1)
-#println("mu2")
-#println(mu2)
     r = rand(M) #independent source of randomness
     Y = zeros(N)
     Z = zeros(N)
     if (M != N || ess < essthresh * N)
-        coupled = rs(Particles(pkm1.x, mu), M, u)
-        Yuncoupled = rs(Particles(pkm1.x,mu1),M,u)
-        Zuncoupled = rs(Particles(pk.x,mu2),M,u)
+        coupled, an_coupled = rs(Particles(pkm1.x, mu), M, u)
+        Yuncoupled, ~ = rs(Particles(pkm1.x,mu1),M,u)
+        Zuncoupled, Zan_uncoupled = rs(Particles(pk.x,mu2),M,u)
         pkm1.w = ones(M)/M
         pk.w = ones(M)/M
+        ancestors = zeros(M)
         for i=1:N
             (pkm1.x[i], pk.x[i]) = (r[i]<p) ? (coupled.x[i],coupled.x[i]) : (Yuncoupled.x[i], Zuncoupled.x[i])
+            ancestors[i] = (r[i]<p) ? an_coupled[i] : Zan_uncoupled[i] 
         end
     end
-    return (pkm1, pk, ess)
+    return (pkm1, pk, ancestors, ess)
 end
 
 """
@@ -116,8 +110,8 @@ function multinomialresampling(p::Particles, M::Int=0, u=nothing)::Particles
     N    = length(p)
     M    = (M>0) ? M : N
     ni   = rand(Multinomial(M, p.w))
-    mask = [j for i in 1:N for j in ones(Int,ni[i])*i]
-    Particles(p.x[mask], ones(M)/M)
+    ancestors = [j for i in 1:N for j in ones(Int,ni[i])*i]
+    return Particles(p.x[ancestors], ones(M)/M), ancestors
 end
 
 """
@@ -127,7 +121,6 @@ Helpful when wanting to correlate randomness in successive filter evaluations.
 """
 function systematicresampling(p::Particles, M::Int=0, u=nothing)::Particles
     #based on MATLAB code from https://uk.mathworks.com/matlabcentral/fileexchange/24968-resampling-methods-for-particle-filtering
-#println("In systematic resampler")
     u = isnothing(u) ? rand() : u #sample if nothing supplied
     N = length(p.w);
     M = (M>0) ? M : N
@@ -139,14 +132,14 @@ function systematicresampling(p::Particles, M::Int=0, u=nothing)::Particles
     T = [range(0,stop=1-1/N,length=N) .+ u/N; 1];
     i=1;
     j=1;
-    indx = zeros(Int, N);
+    ancestors = zeros(Int, N);
     while (i<=N)
         if (T[i]<Q[j])
-            indx[i]=j;
+            ancestors[i]=j;
             i+=1;
         else
             j+=1;        
         end
     end
-    return Particles(p.x[indx], ones(M)/M)
+    return Particles(p.x[ancestors], ones(M)/M), ancestors
 end

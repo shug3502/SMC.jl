@@ -5,3 +5,4 @@
 test/__*
 plots/
 .ipynb_checkpoints/
+*.ipynb

@@ -9,8 +9,8 @@ using Distributed
 using SharedArrays
 import Base.length
 
-const Int   = Int32
-const Float = Float32
+const Int   = Int64
+const Float = Float64
 
 include("hmm.jl")
 include("kalman.jl")
@@ -24,5 +24,6 @@ include("armondmodel.jl")
 include("armondmodelSimple.jl")
 #include("smc2.jl")
 include("correlated.jl")
+include("likratio.jl")
 
 end # module
