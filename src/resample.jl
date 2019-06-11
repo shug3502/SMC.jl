@@ -13,7 +13,7 @@ resampling algorithm `rs` is for example a multinomial resampling.
 function resample(p::Particles, essthresh::Float=Inf,
                   rs::Function=multinomialresampling, M::Int=0,
                   u=nothing
-                  )::Tuple{Particles,Float}
+                  )::Tuple{Particles,Array,Float}
     ess = 1.0/sum(p.w.^2)
     N   = length(p)
     M   = M>0 ? M : N
@@ -32,7 +32,7 @@ Project from binary hidden states to a line to enable sorting.
 function sortedresample(p::Particles, essthresh::Float=Inf,
                         rs::Function=stratifiedresampling, M::Int=0,
                         u=nothing
-                        )::Tuple{Particles,Float}
+                        )::Tuple{Particles,Array,Float}
     ess = 1.0/sum(p.w.^2)
     N   = length(p)
     M   = M>0 ? M : N
@@ -63,7 +63,7 @@ See Sen et al 2018 Stat. Comput for description.
 function maxcouplingresample(pkm1::Particles, pk::Particles, essthresh::Float=Inf,
                         rs::Function=stratifiedresampling, M::Int=0,
                         u=nothing
-                        )::Tuple{Particles,Particles,Float}
+                        )::Tuple{Particles,Particles,Array,Float}
     ess = 1.0/sum(pkm1.w.^2)
     N = length(pkm1)
     @assert length(pk) == N
@@ -96,6 +96,8 @@ function maxcouplingresample(pkm1::Particles, pk::Particles, essthresh::Float=In
             (pkm1.x[i], pk.x[i]) = (r[i]<p) ? (coupled.x[i],coupled.x[i]) : (Yuncoupled.x[i], Zuncoupled.x[i])
             ancestors[i] = (r[i]<p) ? an_coupled[i] : Zan_uncoupled[i] 
         end
+    else
+        ancestors = 1:N
     end
     return (pkm1, pk, ancestors, ess)
 end
@@ -119,7 +121,7 @@ end
 Systematic resampling of a particles opject `p`.
 Helpful when wanting to correlate randomness in successive filter evaluations.
 """
-function systematicresampling(p::Particles, M::Int=0, u=nothing)::Particles
+function systematicresampling(p::Particles, M::Int=0, u=nothing)::Tuple{Particles,Array}
     #based on MATLAB code from https://uk.mathworks.com/matlabcentral/fileexchange/24968-resampling-methods-for-particle-filtering
     u = isnothing(u) ? rand() : u #sample if nothing supplied
     N = length(p.w);

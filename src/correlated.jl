@@ -18,6 +18,7 @@ function correlated(observations::Array, priors::Array,
   @assert length(paramProposal) == dimParams  
 
   c = zeros(dimParams,numIter)
+  hiddenstates = zeros(Int, size(observations,2), numIter) #binary states converted to index
   #i=1 case; 
   if isnothing(initialisationFn)
     #By default, set c(1) in the support of prior
@@ -33,7 +34,8 @@ function correlated(observations::Array, priors::Array,
   acceptances = 0
   u = randn(numRandoms) #draw some random numbers to pass to filter calc
   uUnif = cdf.(Normal(),u)
-  psf, lik = runFilter(c[:,1],uUnif,observations,N=N,resampler=resampler)
+  X_1toK, lik = runFilter(c[:,1],uUnif,observations,N=N,resampler=resampler)
+  hiddenstates[:,1] = mapslices(x -> findfirst(w -> w>0, x),X_1toK,dims=1)
 
   #iterate
   for i=2:numIter
@@ -46,7 +48,7 @@ function correlated(observations::Array, priors::Array,
     w = randn(numRandoms)
     uPrime = rho*u + sqrt(1-rho^2)*w
     uPrimeUnif = cdf.(Normal(),uPrime) #convert from gaussian to uniform
-    psf, likPrime = runFilter(cPrime,uPrimeUnif,observations,N=N,resampler=resampler)
+    X_1toK, likPrime = runFilter(cPrime,uPrimeUnif,observations,N=N,resampler=resampler)
     acceptanceProb = sum([logpdf(priors[j],cPrime[j]) for j in 1:dimParams]) - 
                      sum([logpdf(priors[j],c[j,i-1]) for j in 1:dimParams]) + 
                      sum([logpdf(paramProposal[j](cPrime[j]),c[j,i-1]) for j in 1:dimParams]) - 
@@ -55,14 +57,16 @@ function correlated(observations::Array, priors::Array,
     if log(rand()) < acceptanceProb 
       #then accept
       c[:,i] = cPrime
+      hiddenstates[:,i] = mapslices(x -> findfirst(w -> w>0, x),X_1toK,dims=1)
       u = deepcopy(uPrime) #note not storing the u vars
       lik = deepcopy(likPrime)      
       acceptances += 1
       else 
       c[:,i] = c[:,i-1]
+      hiddenstates[:,i] = hiddenstates[:,i-1]
     end
   end
-  return (transpose(c), acceptances/numIter)
+  return (transpose(c), transpose(hiddenstates), acceptances/numIter)
 end
 
 function noisyMCMC(observations::Array, priors::Array,
@@ -76,6 +80,7 @@ function noisyMCMC(observations::Array, priors::Array,
   @assert length(paramProposal) == dimParams  
 
   c = zeros(dimParams,numIter)
+  hiddenstates = zeros(Int, size(observations,2), numIter) #binary states converted to index
   #i=1 case; 
   if isnothing(initialisationFn)
     #By default, set c(1) in the support of prior
@@ -91,7 +96,8 @@ function noisyMCMC(observations::Array, priors::Array,
   acceptances = 0
   u = randn(numRandoms) #draw some random numbers to pass to filter calc
   uUnif = cdf.(Normal(),u)
-  lik = runFilter(c[:,1],uUnif,observations,N=N,resampler=resampler)
+  X_1toK, lik = runFilter(c[:,1],uUnif,observations,N=N,resampler=resampler)
+  hiddenstates[:,1] = mapslices(x -> findfirst(w -> w>0, x),X_1toK,dims=1)
 
   #iterate
   for i=2:numIter
@@ -102,10 +108,9 @@ function noisyMCMC(observations::Array, priors::Array,
     #propose new params
     cPrime = [rand(paramProposal[j](c[j,i-1])) for j in 1:dimParams]
     w = randn(numRandoms)
-    likDiff = computeCoupledLikRatio(c[:,i-1], cPrime, observations,
+    X_1toK, likDiff = computeCoupledLikRatio(c[:,i-1], cPrime, observations,
                          u1 = u, u2 = w,
                          N=N, rho=rho)
-
     acceptanceProb = sum([logpdf(priors[j],cPrime[j]) for j in 1:dimParams]) - 
                      sum([logpdf(priors[j],c[j,i-1]) for j in 1:dimParams]) + 
                      sum([logpdf(paramProposal[j](cPrime[j]),c[j,i-1]) for j in 1:dimParams]) - 
@@ -114,12 +119,14 @@ function noisyMCMC(observations::Array, priors::Array,
     if log(rand()) < acceptanceProb 
       #then accept
       c[:,i] = cPrime
+      hiddenstates[:,i] = mapslices(x -> findfirst(w -> w>0, x),X_1toK,dims=1)
       u = rho*u + sqrt(1-rho^2)*w #note not storing the u vars
       acceptances += 1
       else 
       c[:,i] = c[:,i-1]
+      hiddenstates[:,i] = hiddenstates[:,i-1]
     end
   end
-  return (transpose(c), acceptances/numIter)
+  return (transpose(c), transpose(hiddenstates), acceptances/numIter)
 end
 

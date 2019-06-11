@@ -68,9 +68,9 @@ mean(ps::ParticleSet) = [mean(p) for p in ps.p]
 """
     samplehiddenstate(ps::ParticleSet)
 
-Draw a sample $$X_{1:T} \sim \hat{p}_{\theta}(\cdot | y_{1:T}).$$
+Draw a sample X_1toK ~ p_theta(. | y_1toK).
 """
-function samplehiddenstate(ps)
+function samplehiddenstate(ps,ancestors)
 # ***TODO: implement this somewhere: will need to store the ancestor variables ***
 #the functions in src/particlesmoother.jl may be a better solution as may provide a reweighted collection of particles to solve the smoothing problem rather than a single particle
     K = length(ps)

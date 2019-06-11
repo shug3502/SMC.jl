@@ -10,6 +10,7 @@ export
     particlesmoother_ffbs
 
 Particle smoother based on the Forward Filtering Backward Smoothing algorithm.
+See eg. Doucet and Johansen, 2008, A tutorial on particle filtering and smoothing: fifteen years later
 The complexity of this algorithm is O(KN^2)
 """
 function particlesmoother_ffbs(hmm::HMM, psf::ParticleSet)
@@ -26,7 +27,7 @@ function particlesmoother_ffbs(hmm::HMM, psf::ParticleSet)
         # denominator precomputation
         # -- complexity O(N^2) (linear storage)
         ds = [ sum( pk.w[l] *
-                      exp(hmm.transloglik(k,pk.x[l],pkp1.x[j]))
+                      exp(hmm.transloglik(k,pk.x[l],pkp1.x[j])) #***TODO: check that transloglik doesn't need more arguments ***
                         for l in 1:N ) for j in 1:N ]
         # FFBS formula, in place computations
         # -- complexity O(N^2)

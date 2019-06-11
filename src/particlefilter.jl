@@ -16,8 +16,9 @@ function particlefilter(hmm::HMM, observations::Matrix{Float}, N::Int,
     # particle set filter (storage)
     psf = ParticleSet(N, hmm.dimx, K)
     ess = zeros(K)
+    ancestors = zeros(N, K-1)
     ev = 0
-    (p1,e1) = resampler( Particles(
+    (p1,~,e1) = resampler( Particles(
                             [proposal.mu0 + proposal.noise() for i in 1:N],
                             ones(N)/N),
                         essthresh, resampling, 0, u[1])
@@ -46,12 +47,12 @@ function particlefilter(hmm::HMM, observations::Matrix{Float}, N::Int,
         Wk .-= minimum(Wk) # try to avoid underflows
         wk  = exp.(Wk)
         wk /= sum(wk)
-        (pk, ek) = resampler(Particles(xk,wk), essthresh, resampling, 0, u[K*(N+1)-(k-2)])
+        (pk,ancestors[:,k-1],ek) = resampler(Particles(xk,wk), essthresh, resampling, 0, u[K*(N+1)-(k-2)])
 
         psf.p[k] = pk
         ess[k]   = ek
     end
-    (psf, ess, ev)
+    (psf, ancestors, ess, ev)
 end
 
 function coupledparticlefilter(hmm1::HMM, hmm2::HMM, observations::Matrix{Float}, N::Int,
@@ -69,9 +70,10 @@ function coupledparticlefilter(hmm1::HMM, hmm2::HMM, observations::Matrix{Float}
     psf1 = ParticleSet(N, hmm1.dimx, K)
     psf2 = ParticleSet(N, hmm2.dimx, K)
     ess = zeros(K)
+    ancestors = zeros(N,K-1)
     ev = 0
     evprime = 0
-    (p1,p1prime,e1) = resampler( Particles(
+    (p1,p1prime,~,e1) = resampler( Particles(
                             [proposal1.mu0 + proposal1.noise() for i in 1:N],
                             ones(N)/N),
                                  Particles(
@@ -114,16 +116,14 @@ function coupledparticlefilter(hmm1::HMM, hmm2::HMM, observations::Matrix{Float}
         wkprime = exp.(Wkprime)
         wk /= sum(wk)
         wkprime /= sum(wkprime)
-#println("wk: $wk")
-#println("wkprime: $wkprime")
-        (pk,pkprime,ek) = resampler(Particles(xk,wk), Particles(xkprime,wkprime), essthresh, resampling, 0, u1[K*(N+1)-(k-2)])
+        (pk,pkprime,ancestors[:,k-1],ek) = resampler(Particles(xk,wk), Particles(xkprime,wkprime), essthresh, resampling, 0, u1[K*(N+1)-(k-2)])
 
         psf1.p[k] = pk
         psf2.p[k] = pkprime
         ess[k]   = ek
     end
     evdiff = ev - evprime
-    (psf1, psf2, ess, evdiff)
+    (psf1, psf2, ancestors, ess, evdiff)
 end
 
 

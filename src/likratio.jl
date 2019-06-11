@@ -11,9 +11,9 @@ function computeLikRatio(th1::Array{Float}, th2::Array{Float}, observations::Arr
   u2 = (isnothing(u2)) ? randn(numRandoms) : u2
   u3 = rho*u1 + sqrt(1-rho^2)*u2
   ~,lik1 = runFilter(th1, cdf.(Normal(),u1), observations, x0=x0, N=N, resampler=resampler)
-  psf2,lik2 = runFilter(th2, cdf.(Normal(),u3), observations, x0=x0, N=N, resampler=resampler)
+  X_1toK,lik2 = runFilter(th2, cdf.(Normal(),u3), observations, x0=x0, N=N, resampler=resampler)
   diff = lik1 - lik2
-  return (psf2,diff)
+  return (X_1toK,diff)
 end
 
 function computeCoupledLikRatio(th1::Array{Float}, th2::Array{Float}, observations::Array{Float};
@@ -23,8 +23,8 @@ function computeCoupledLikRatio(th1::Array{Float}, th2::Array{Float}, observatio
   u1 = (isnothing(u1)) ? randn(numRandoms) : u1
   u2 = (isnothing(u2)) ? randn(numRandoms) : u2
   u3 = rho*u1 + sqrt(1-rho^2)*u2
-  psf2,diff = runCoupledFilter(th1, th2, cdf.(Normal(),u1), cdf.(Normal(),u3), observations, x0=x0, N=N)
-  return (psf2,diff)
+  X_1toK,diff = runCoupledFilter(th1, th2, cdf.(Normal(),u1), cdf.(Normal(),u3), observations, x0=x0, N=N)
+  return (X_1toK,diff)
 end
 
 function runFilter(theta::Array, u::Union{Array,Nothing}, observations::Array; x0::Array = [0, 1.0, 0, 0],
@@ -46,9 +46,15 @@ function runFilter(theta::Array, u::Union{Array,Nothing}, observations::Array; x
   else
     error("Unknown filter method. Use Aux or Boot instead.")
   end
-  (psf, ess, ev) = particlefilter(hmm, observations, N, prop,
+  (psf, ancestors, ess, ev) = particlefilter(hmm, observations, N, prop,
                                   resampling=systematicresampling, u=u, resampler=resampler)
-  return (psf,ev)
+  psw = particlesmoother_ffbs(hmm, psf)
+  K = length(psw)
+  X_1toK = zeros(hmm.dimx,K)
+  for k=1:K
+    X_1toK[:,k] = psw.p[k].x[rand(Categorical(psw.p[k].w))]
+  end
+  return (X_1toK,ev)
 end
 
 function runCoupledFilter(theta1::Array, theta2::Array, u1::Union{Array,Nothing}, u2::Union{Array,Nothing},
@@ -78,8 +84,15 @@ function runCoupledFilter(theta1::Array, theta2::Array, u1::Union{Array,Nothing}
   else
     error("Unknown filter method. Use Aux or Boot instead.")
   end
-  (psf1, psf2, ess, evdiff) = coupledparticlefilter(hmm1, hmm2, observations, N, prop1, prop2,
+  (psf1, psf2, ancestors, ess, evdiff) = coupledparticlefilter(hmm1, hmm2, observations, N, prop1, prop2,
                                   resampling=systematicresampling, u1=u1, u2=u2, resampler=maxcouplingresample)
-  return (psf2, evdiff)
+  psw = particlesmoother_ffbs(hmm, psf2)
+  K = length(psw)
+  X_1toK = zeros(hmm2.dimx,K)
+  for k=1:K          
+    X_1toK[:,k] = psw.p[k].x[rand(Categorical(psw.p[k].w))]
+  end
+
+  return (X_1toK, evdiff)
 end
 
