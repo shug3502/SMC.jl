@@ -11,40 +11,22 @@ struct thetaTensionClock
     kappa::Float
     v_minus::Float
     v_plus::Float
-    p_icoh::Float
-    p_coh::Float
     L::Float
+    r::Float
+    rho::Float
+    a_plus::Float
+    a_minus::Float
     dt::Float
 end
 
-function stochasticTransition(prob::Array{Float}, nStates::Int, u::Union{Array{Float},Float,Nothing})
-#given probabilities of a transition to each of nStates, work out which one to switch to
-    @assert length(prob) == nStates
-    u = isnothing(u) ? rand() : u
-    cumProb = cumsum(prob)
-    @assert isapprox(cumProb[nStates],1.0)
-    xk = zeros(nStates)
-    for j = 1:nStates
-        if (u<cumProb[j])
-            xk[j] = 1
-            break
-        end
-    end
-    return xk
-end
-    
-function armondModelSimple(th::Union{Nothing,thetaSimple}=nothing)
-    th = (isnothing(th)) ? thetaSimple(450, 0.008, 0.025, -0.035, 0.015, 0.6, 0.9, 0.775, 2.0) : th #set default
+function tensionClockModel(th::Union{Nothing,thetaTensionClock}=nothing)
+    th = (isnothing(th)) ? thetaTensionClock(450, 0.008, 0.025, -0.035, 0.015, 0.775, 1.0, 2000, 3*10^(-4), 2.5*10^(-5), 2.0) : th #set default
     nSisters = convert(Int,2)
     nStates = convert(Int,4)
     angleTheta = convert(Float,0) #for rotation when in 3D
     R = th.dt/th.tau*eye(nSisters) #variance matrix
 
-    #p_coh and p_icoh instead as per Armond et al 2015 rather than reparameterized
-    p_icoh = th.p_icoh
-    p_coh = th.p_coh
-    q_icoh = 1-p_icoh
-    q_coh = 1-p_coh
+#matrix P must be calculated at each time step
     P = [p_icoh*p_icoh p_icoh*q_icoh p_icoh*q_icoh q_icoh*q_icoh;
         p_coh*q_coh p_coh*p_coh q_coh*q_coh p_coh*q_coh;
         p_coh*q_coh q_coh*q_coh p_coh*p_coh p_coh*q_coh;
