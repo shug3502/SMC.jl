@@ -22,7 +22,9 @@ for j=1:nSisters
 end
 
 df = DataFrame(outputFormat)
-names!(df,Symbol(["Position_1","Position_2","Position_3","Amplitude_1","Amplitude_2","Amplitude_3","Frame","SisterPairID","SisterID"]))
+names!(df,[Symbol("Position_1"),Symbol("Position_2"),Symbol("Position_3"),
+        Symbol("Amplitude_1"),Symbol("Amplitude_2"),Symbol("Amplitude_3"),
+        Symbol("Frame"),Symbol("SisterPairID"),Symbol("SisterID")])
    
 return df 
 end

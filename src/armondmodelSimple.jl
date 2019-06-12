@@ -5,8 +5,10 @@ export
     armondModelSimple,
     stochasticTransition
 
+abstract type AbstractTheta end
+
 #set model parameters
-struct thetaSimple
+struct thetaSimple <: AbstractTheta
     tau::Float
     alpha::Float
     kappa::Float

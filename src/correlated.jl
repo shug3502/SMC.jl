@@ -8,14 +8,13 @@ export
 #See deligiannis et al 2018 and golightly et al 2018
 
 function correlated(observations::Array, priors::Array,
-         paramProposal::Array, dimParams::Int, numRandoms::Int;
+         paramProposal::Function, dimParams::Int, numRandoms::Int;
          rho::Float=0.95, numIter::Int=1000, N::Int=100,
          initialisationFn=nothing, printFreq::Int=1000,
          resampler::Function=resample)
   #priors should be an array of distributions
 
   @assert length(priors) == dimParams
-  @assert length(paramProposal) == dimParams  
 
   c = zeros(dimParams,numIter)
   hiddenstates = zeros(Int, size(observations,2), numIter) #binary states converted to index
@@ -44,16 +43,16 @@ function correlated(observations::Array, priors::Array,
       println("acceptance rate is: ", acceptances/i)
     end
     #propose new params
-    cPrime = [rand(paramProposal[j](c[j,i-1])) for j in 1:dimParams]
+    cPrime = rand(paramProposal(c[:,i-1]))
     w = randn(numRandoms)
     uPrime = rho*u + sqrt(1-rho^2)*w
     uPrimeUnif = cdf.(Normal(),uPrime) #convert from gaussian to uniform
     X_1toK, likPrime = runFilter(cPrime,uPrimeUnif,observations,N=N,resampler=resampler)
     acceptanceProb = sum([logpdf(priors[j],cPrime[j]) for j in 1:dimParams]) - 
                      sum([logpdf(priors[j],c[j,i-1]) for j in 1:dimParams]) + 
-                     sum([logpdf(paramProposal[j](cPrime[j]),c[j,i-1]) for j in 1:dimParams]) - 
-                     sum([logpdf(paramProposal[j](c[j,i-1]),cPrime[j]) for j in 1:dimParams]) + 
-                     + likPrime - lik
+                     logpdf(paramProposal(cPrime),c[:,i-1]) - 
+                     logpdf(paramProposal(c[:,i-1]),cPrime) + 
+                     likPrime - lik
     if log(rand()) < acceptanceProb 
       #then accept
       c[:,i] = cPrime
@@ -70,14 +69,13 @@ function correlated(observations::Array, priors::Array,
 end
 
 function noisyMCMC(observations::Array, priors::Array,
-         paramProposal::Array, dimParams::Int, numRandoms::Int;
+         paramProposal::Function, dimParams::Int, numRandoms::Int;
          rho::Float=0.95, numIter::Int=1000, N::Int=100,
          initialisationFn=nothing, printFreq::Int=1000,
          resampler::Function=resample)
   #priors should be an array of distributions
 
   @assert length(priors) == dimParams
-  @assert length(paramProposal) == dimParams  
 
   c = zeros(dimParams,numIter)
   hiddenstates = zeros(Int, size(observations,2), numIter) #binary states converted to index
@@ -106,15 +104,15 @@ function noisyMCMC(observations::Array, priors::Array,
       println("acceptance rate is: ", acceptances/i)
     end
     #propose new params
-    cPrime = [rand(paramProposal[j](c[j,i-1])) for j in 1:dimParams]
+    cPrime = rand(paramProposal(c[:,i-1]))
     w = randn(numRandoms)
     X_1toK, likDiff = computeCoupledLikRatio(c[:,i-1], cPrime, observations,
                          u1 = u, u2 = w,
                          N=N, rho=rho)
     acceptanceProb = sum([logpdf(priors[j],cPrime[j]) for j in 1:dimParams]) - 
                      sum([logpdf(priors[j],c[j,i-1]) for j in 1:dimParams]) + 
-                     sum([logpdf(paramProposal[j](cPrime[j]),c[j,i-1]) for j in 1:dimParams]) - 
-                     sum([logpdf(paramProposal[j](c[j,i-1]),cPrime[j]) for j in 1:dimParams]) + 
+                     logpdf(paramProposal(cPrime),c[:,i-1]) - 
+                     logpdf(paramProposal(c[:,i-1]),cPrime) + 
                      - likDiff
     if log(rand()) < acceptanceProb 
       #then accept
