@@ -32,13 +32,14 @@ function anaphaseModel(th::Union{Nothing,AbstractTheta}=nothing)
     #p_coh and p_icoh instead as per Armond et al 2015 rather than reparameterized
     p_icoh = th.p_icoh
     p_coh = th.p_coh
+    q_ana = th.q_ana
     q_icoh = 1-p_icoh
     q_coh = 1-p_coh
     p_ana = 1-q_ana
-    P = [p_icoh*p_icoh p_icoh*q_icoh p_icoh*q_icoh q_icoh*q_icoh p_ana;
-        p_coh*q_coh p_coh*p_coh q_coh*q_coh p_coh*q_coh p_ana;
-        p_coh*q_coh q_coh*q_coh p_coh*p_coh p_coh*q_coh p_ana;
-        q_icoh*q_icoh p_icoh*q_icoh p_icoh*q_icoh p_icoh*p_icoh p_ana;
+    P = [p_icoh*p_icoh*p_ana p_icoh*q_icoh*p_ana p_icoh*q_icoh*p_ana q_icoh*q_icoh*p_ana q_ana;
+        p_coh*q_coh*p_ana p_coh*p_coh*p_ana q_coh*q_coh*p_ana p_coh*q_coh*p_ana q_ana;
+        p_coh*q_coh*p_ana q_coh*q_coh*p_ana p_coh*p_coh*p_ana p_coh*q_coh*p_ana q_ana;
+        q_icoh*q_icoh*p_ana p_icoh*q_icoh*p_ana p_icoh*q_icoh*p_ana p_icoh*p_icoh*p_ana q_ana;
         0 0 0 0 1.0]
 
     function transmean(k::Int, xkm1::Union{Array{Int},Array{Float}}, u::Union{Array{Float},Float,Nothing}, P::Array{Float})
@@ -50,18 +51,18 @@ function anaphaseModel(th::Union{Nothing,AbstractTheta}=nothing)
         return xk
     end
 
-    function odeUpdateMatrix(theta::thetaSimple)
+    function odeUpdateMatrix(theta::AbstractTheta)
         M = [(-theta.kappa - theta.alpha) theta.kappa -theta.v_plus -theta.v_plus -theta.v_minus -theta.v_minus 0; 
             theta.kappa (-theta.kappa - theta.alpha) theta.v_plus theta.v_minus theta.v_plus theta.v_minus 0]
         return M
     end
 
-    function odeUpdateVector(theta::thetaSimple)
+    function odeUpdateVector(theta::AbstractTheta)
         mu = [theta.kappa*theta.L*cos(angleTheta); -theta.kappa*theta.L*cos(angleTheta)]
         return mu
     end
 
-    function obsmean(k::Int, xk::Union{Array{Int},Array{Float}}, ykm1::Array{Float}, theta::thetaSimple)    
+    function obsmean(k::Int, xk::Union{Array{Int},Array{Float}}, ykm1::Array{Float}, theta::AbstractTheta)    
     state = [ykm1; xk]
     #forward euler step
     if xk[5]>0
@@ -81,7 +82,7 @@ function anaphaseModel(th::Union{Nothing,AbstractTheta}=nothing)
     return log(transition_prob)
     end
 
-    function approxtransmean(k::Int, xkm1::Union{AbstractArray{Int},AbstractArray{Float}}, ykm1::AbstractArray{Float}, yk::AbstractArray{Float}, theta::thetaSimple,
+    function approxtransmean(k::Int, xkm1::Union{AbstractArray{Int},AbstractArray{Float}}, ykm1::AbstractArray{Float}, yk::AbstractArray{Float}, theta::AbstractTheta,
                              u::Union{Nothing,AbstractArray{Float},Float}, P::AbstractArray{Float})
         whichstateprev = findfirst(w -> w>0, xkm1)
         @assert !isnothing(whichstateprev) "oops the previous state was $xkm1"
@@ -95,7 +96,7 @@ function anaphaseModel(th::Union{Nothing,AbstractTheta}=nothing)
                            sqrt(theta.dt/theta.tau)),yk) #TODO could be more general for non isotropic gaussian
         end
         #anaphase state case separately
-        Q[5] = logpdf(MvNormal(ykm1 + theta.dt.*[theta.v_ana; -theta.v_ana], sqrt(theta.dt/theta.tau),yk) 
+        Q[5] = logpdf(MvNormal(ykm1 + theta.dt.*[theta.v_ana; -theta.v_ana], sqrt(theta.dt/theta.tau)),yk) 
         b = maximum(Q)
         prob = exp.(Q .- b) #subtract for numerical stability
         prob ./= sum(prob) #normalise
@@ -104,7 +105,7 @@ function anaphaseModel(th::Union{Nothing,AbstractTheta}=nothing)
     end
 
     function approxloglik(k::Int, xkm1::Union{Array{Int},Array{Float}}, ykm1::Array{Float}, yk::Array{Float},
-                          xk::Union{Array{Int},Array{Float}}, theta::thetaSimple, P::Array{Float})
+                          xk::Union{Array{Int},Array{Float}}, theta::AbstractTheta, P::Array{Float})
         whichstateprev = findfirst(w -> w>0, xkm1)
         whichstatenext = findfirst(w -> w>0 , xk)
         @assert !isnothing(whichstateprev)
@@ -119,7 +120,7 @@ function anaphaseModel(th::Union{Nothing,AbstractTheta}=nothing)
                            sqrt(theta.dt/theta.tau)),yk) #TODO could be more general for non isotropic gaussian
         end
         #anaphase state case separately
-        Q[5] = logpdf(MvNormal(ykm1 + theta.dt.*[theta.v_ana; -theta.v_ana], sqrt(theta.dt/theta.tau),yk)
+        Q[5] = logpdf(MvNormal(ykm1 + theta.dt.*[theta.v_ana; -theta.v_ana], sqrt(theta.dt/theta.tau)),yk)
         b = maximum(Q)
         prob = exp.(Q .- b) #subtract for numerical stability
         prob ./= sum(prob) #normalise

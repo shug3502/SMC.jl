@@ -25,5 +25,6 @@ include("armondmodelSimple.jl")
 include("correlated.jl")
 include("likratio.jl")
 include("processjob.jl")
+include("anaphaseModel.jl")
 
 end # module
