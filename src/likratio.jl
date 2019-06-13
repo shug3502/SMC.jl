@@ -4,26 +4,26 @@ export computeLikRatio,
        runCoupledFilter
 #TODO: put everything in an options structure?
 function computeLikRatio(th1::Array{Float}, th2::Array{Float}, observations::Array{Float};
-                         u1 = nothing, u2 = nothing, x0::Array = [0, 1.0, 0, 0],
+                         u1 = nothing, u2 = nothing, x0::Array = [0, 1.0, 0, 0], dt::Float=2.0,
                          N::Int=64, rho::Float=0.95, model::String="Simple", resampler::Function=resample)
   numRandoms = size(observations,2)*(N+1)
   u1 = (isnothing(u1)) ? randn(numRandoms) : u1
   u2 = (isnothing(u2)) ? randn(numRandoms) : u2
   u3 = rho*u1 + sqrt(1-rho^2)*u2
-  ~,lik1 = runFilter(th1, cdf.(Normal(),u1), observations, x0=x0, N=N, model=model, resampler=resampler)
-  X_1toK,lik2 = runFilter(th2, cdf.(Normal(),u3), observations, x0=x0, N=N, model=model, resampler=resampler)
+  ~,lik1 = runFilter(th1, cdf.(Normal(),u1), observations, x0=x0, N=N, dt=dt, model=model, resampler=resampler)
+  X_1toK,lik2 = runFilter(th2, cdf.(Normal(),u3), observations, x0=x0, N=N, dt=dt, model=model, resampler=resampler)
   diff = lik1 - lik2
   return (X_1toK,diff)
 end
 
 function computeCoupledLikRatio(th1::Array{Float}, th2::Array{Float}, observations::Array{Float};
-                         u1 = nothing, u2 = nothing, x0::Array = [0, 1.0, 0, 0],
+                         u1 = nothing, u2 = nothing, x0::Array = [0, 1.0, 0, 0], dt::Float=2.0,
                          N::Int=64, rho::Float=0.95, model::String="Simple")
   numRandoms = size(observations,2)*(N+1)
   u1 = (isnothing(u1)) ? randn(numRandoms) : u1
   u2 = (isnothing(u2)) ? randn(numRandoms) : u2
   u3 = rho*u1 + sqrt(1-rho^2)*u2
-  X_1toK,diff = runCoupledFilter(th1, th2, cdf.(Normal(),u1), cdf.(Normal(),u3), observations, x0=x0, N=N, model=model)
+  X_1toK,diff = runCoupledFilter(th1, th2, cdf.(Normal(),u1), cdf.(Normal(),u3), observations, x0=x0, N=N, dt=dt, model=model)
   return (X_1toK,diff)
 end
 

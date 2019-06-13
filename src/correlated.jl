@@ -9,8 +9,9 @@ export
 
 function correlated(observations::Array, priors::Array,
          paramProposal::Function, dimParams::Int, numRandoms::Int;
-         rho::Float=0.95, numIter::Int=1000, N::Int=100,
-         initialisationFn=nothing, printFreq::Int=1000,
+         rho::Float=0.95, numIter::Int=1000, x0::Array=[0,1,0,0], N::Int=100,
+         dt::Float=2.0, initialisationFn=nothing, printFreq::Int=1000,
+         model::String="Simple",
          resampler::Function=resample)
   #priors should be an array of distributions
 
@@ -33,7 +34,7 @@ function correlated(observations::Array, priors::Array,
   acceptances = 0
   u = randn(numRandoms) #draw some random numbers to pass to filter calc
   uUnif = cdf.(Normal(),u)
-  X_1toK, lik = runFilter(c[:,1],uUnif,observations,N=N,resampler=resampler)
+  X_1toK, lik = runFilter(c[:,1],uUnif,observations,x0=x0,N=N,dt=dt,model=model,resampler=resampler)
   hiddenstates[:,1] = mapslices(x -> findfirst(w -> w>0, x),X_1toK,dims=1)
 
   #iterate
@@ -44,15 +45,21 @@ function correlated(observations::Array, priors::Array,
     end
     #propose new params
     cPrime = rand(paramProposal(c[:,i-1]))
-    w = randn(numRandoms)
-    uPrime = rho*u + sqrt(1-rho^2)*w
-    uPrimeUnif = cdf.(Normal(),uPrime) #convert from gaussian to uniform
-    X_1toK, likPrime = runFilter(cPrime,uPrimeUnif,observations,N=N,resampler=resampler)
-    acceptanceProb = sum([logpdf(priors[j],cPrime[j]) for j in 1:dimParams]) - 
+    if sum([logpdf(priors[j],cPrime[j]) for j in 1:dimParams]) > -Inf
+      #then is in support of the prior and can continue
+      w = randn(numRandoms)
+      uPrime = rho*u + sqrt(1-rho^2)*w
+      uPrimeUnif = cdf.(Normal(),uPrime) #convert from gaussian to uniform
+      X_1toK, likPrime = runFilter(cPrime,uPrimeUnif,observations,x0=x0,N=N,dt=dt,model=model,resampler=resampler)
+      acceptanceProb = sum([logpdf(priors[j],cPrime[j]) for j in 1:dimParams]) - 
                      sum([logpdf(priors[j],c[j,i-1]) for j in 1:dimParams]) + 
                      logpdf(paramProposal(cPrime),c[:,i-1]) - 
                      logpdf(paramProposal(c[:,i-1]),cPrime) + 
                      likPrime - lik
+    else #not in support of prior
+      acceptanceProb = -Inf
+    end
+
     if log(rand()) < acceptanceProb 
       #then accept
       c[:,i] = cPrime
@@ -70,8 +77,9 @@ end
 
 function noisyMCMC(observations::Array, priors::Array,
          paramProposal::Function, dimParams::Int, numRandoms::Int;
-         rho::Float=0.95, numIter::Int=1000, N::Int=100,
-         initialisationFn=nothing, printFreq::Int=1000,
+         rho::Float=0.95, numIter::Int=1000, x0::Array=[0,1,0,0], N::Int=100,
+         dt::Float=2.0, initialisationFn=nothing, printFreq::Int=1000,
+         model::String="Simple",
          resampler::Function=resample)
   #priors should be an array of distributions
 
@@ -94,7 +102,7 @@ function noisyMCMC(observations::Array, priors::Array,
   acceptances = 0
   u = randn(numRandoms) #draw some random numbers to pass to filter calc
   uUnif = cdf.(Normal(),u)
-  X_1toK, lik = runFilter(c[:,1],uUnif,observations,N=N,resampler=resampler)
+  X_1toK, lik = runFilter(c[:,1],uUnif,observations,x0=x0,N=N,dt=dt,model=model,resampler=resampler)
   hiddenstates[:,1] = mapslices(x -> findfirst(w -> w>0, x),X_1toK,dims=1)
 
   #iterate
@@ -105,15 +113,19 @@ function noisyMCMC(observations::Array, priors::Array,
     end
     #propose new params
     cPrime = rand(paramProposal(c[:,i-1]))
-    w = randn(numRandoms)
-    X_1toK, likDiff = computeCoupledLikRatio(c[:,i-1], cPrime, observations,
-                         u1 = u, u2 = w,
-                         N=N, rho=rho)
-    acceptanceProb = sum([logpdf(priors[j],cPrime[j]) for j in 1:dimParams]) - 
-                     sum([logpdf(priors[j],c[j,i-1]) for j in 1:dimParams]) + 
-                     logpdf(paramProposal(cPrime),c[:,i-1]) - 
-                     logpdf(paramProposal(c[:,i-1]),cPrime) + 
-                     - likDiff
+    if sum([logpdf(priors[j],cPrime[j]) for j in 1:dimParams]) > -Inf #params are in support of prior 
+      w = randn(numRandoms)
+      X_1toK, likDiff = computeCoupledLikRatio(c[:,i-1], cPrime, observations,
+                         u1 = u, u2 = w, x0 = x0, dt = dt,
+                         N=N, rho=rho, model=model)
+      acceptanceProb = sum([logpdf(priors[j],cPrime[j]) for j in 1:dimParams]) - 
+                       sum([logpdf(priors[j],c[j,i-1]) for j in 1:dimParams]) + 
+                       logpdf(paramProposal(cPrime),c[:,i-1]) - 
+                       logpdf(paramProposal(c[:,i-1]),cPrime) + 
+                       - likDiff
+    else
+      acceptanceProb = -Inf  #params not in support of prior
+    end
     if log(rand()) < acceptanceProb 
       #then accept
       c[:,i] = cPrime
