@@ -35,7 +35,7 @@ function nearestSPD(A)
   r,c = size(A);
   if r != c
     error("A must be a square matrix.")
-  elseif (r == 1) & (A <= 0)
+  elseif (r == 1) & any(A .<= 0)
     # A was scalar and non-positive, so just return eps
     Ahat = eps;
     return Ahat
@@ -47,7 +47,7 @@ function nearestSPD(A)
   # Clearly H is itself SPD.
   F = svd(B);
   U, Sigma, V = F.U, F.S, F.V;
-  H = V*Sigma*V';
+  H = V*diagm(0 => Sigma)*V';
   # get Ahat in the above formula
   Ahat = (B+H)/2;
   # ensure symmetry
@@ -55,12 +55,12 @@ function nearestSPD(A)
   # test that Ahat is in fact PD. if it is not so, then tweak it just a bit.
   k = 0;
   while !isposdef(Ahat)
-    k = k + 1;
+    k += 1;
       # Ahat failed the chol test. It must have been just a hair off,
       # due to floating point trash, so it is simplest now just to
       # tweak by adding a tiny multiple of an identity matrix.
     mineig = minimum(eigvals(Ahat));
-    Ahat = Ahat + (-mineig*k.^2 + eps(mineig))*eye(size(A));
-end
-
+    Ahat = Ahat + (-mineig*k.^2 + eps(mineig))*eye(size(A,1));
+  end
+return Ahat
 end

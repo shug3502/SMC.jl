@@ -34,14 +34,15 @@ function particlefilter(hmm::HMM, observations::Matrix{Float}, N::Int,
         xk    = similar(pkm1.x)
 
         # sample (BOOTSTRAP)
-
+#mysum = zeros(5)
         for i in convert(Array{Int},1:N)
             xk[i]    = proposal.mean(k, pkm1.x[i], obskm1, obsk, u[(k-1)*N+i]) + proposal.noise(k,u[(k-1)*N+i]) #pass a single random number to the fwd simulation
             logak[i] = hmm.transloglik(k, pkm1.x[i], xk[i]) +
                         hmm.obsloglik(k, obskm1, obsk, xk[i]) -
                         proposal.loglik(k, pkm1.x[i], obskm1, obsk, xk[i])
+#mysum += xk[i]
         end
-
+#println(mysum ./ N)
         Wk  = log.(pkm1.w) + logak
         ev += sum(logak)/N #to compute the likelihood/evidence for p(y|c)
         Wk .-= minimum(Wk) # try to avoid underflows
@@ -52,6 +53,7 @@ function particlefilter(hmm::HMM, observations::Matrix{Float}, N::Int,
         psf.p[k] = pk
         ess[k]   = ek
     end
+#println("ess: $ess")
     (psf, ancestors, ess, ev)
 end
 

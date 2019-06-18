@@ -40,7 +40,8 @@ function anaphaseModel(th::Union{Nothing,AbstractTheta}=nothing)
         p_coh*q_coh*p_ana p_coh*p_coh*p_ana q_coh*q_coh*p_ana p_coh*q_coh*p_ana q_ana;
         p_coh*q_coh*p_ana q_coh*q_coh*p_ana p_coh*p_coh*p_ana p_coh*q_coh*p_ana q_ana;
         q_icoh*q_icoh*p_ana p_icoh*q_icoh*p_ana p_icoh*q_icoh*p_ana p_icoh*p_icoh*p_ana q_ana;
-        0 0 0 0 1.0]
+        0 0 0 0 1]
+#        q_ana/4 q_ana/4 q_ana/4 q_ana/4 p_ana]
 
     function transmean(k::Int, xkm1::Union{Array{Int},Array{Float}}, u::Union{Array{Float},Float,Nothing}, P::Array{Float})
         whichstateprev = findfirst(w -> w>0, xkm1)
