@@ -4,9 +4,14 @@ function particlegibbs(hmm::HMM, observations::Matrix{Float},
                        initialisationFn::Array, priors::Array,
                        N::Int, nIter::Int, dimParams::Int;
                        model::String="Simple", dt::Float=2.0,
+                       x0::Array=[0, 1, 0, 0],
                        resampling::Function=multinomialresampling,
                        essthresh::Float=0.5, u=nothing,
-                       resampler::Function=resample
+                       resampler::Function=resample,
+                       filterMethod::String="Aux",
+                       printFreq::Int=1000,
+                       maxRejects::Int=1000,
+                       burnin::Int=round(Int,nIter/10)
 )
 
 #initialize theta, initialize x_{1:T}
@@ -29,6 +34,10 @@ c = zeros(dimParams,nIter)
 ##########################
 
 for n=2:nIter
+  if n%printFreq == 0
+      println("Iter: ", n)
+    end
+
   #run csmc to draw x_{1:T} given theta
 ##########################
   #update proposal
@@ -43,17 +52,16 @@ for n=2:nIter
   #draw theta given x_{1:T} based on previous methods 
   cTemp = copy(c[:,n-1])
   cTemp[1] = gibbsUpdateTau(cTemp,hiddenstates[:,:,n],observations)
-  cTemp[4:5] = gibbsUpdateVpm(cTemp,hiddenstates[:,:,n],observations)
-  cTemp[3] = gibbsUpdateKappa(cTemp,hiddenstates[:,:,n],observations)
-  cTemp[8] = gibbsUpdateL(cTemp,hiddenstates[:,:,n],observations)
-  cTemp[2] = gibbsUpdateAlpha(cTemp,hiddenstates[:,:,n],observations)
+  cTemp[4:5] = gibbsUpdateVpm(cTemp,hiddenstates[:,:,n],observations,maxRejects=maxRejects)
+  cTemp[3] = gibbsUpdateKappa(cTemp,hiddenstates[:,:,n],observations,maxRejects=maxRejects)
+  cTemp[8] = gibbsUpdateL(cTemp,hiddenstates[:,:,n],observations,maxRejects=maxRejects)
+  cTemp[2] = gibbsUpdateAlpha(cTemp,hiddenstates[:,:,n],observations,maxRejects=maxRejects)
   cTemp[6:7] = gibbsUpdatePcohicoh(cTemp,hiddenstates[:,:,n],observations)
-            println(cTemp)
   c[:,n] = cTemp
 end
     states = mapslices(x -> findfirst(w -> w>0, x),hiddenstates,dims=1)
     actRate = 1
-return (transpose(c), transpose(dropdims(states,dims=1)), actRate)
+return (transpose(c[:,(burnin+1):nIter]), transpose(dropdims(states,dims=1)[:,(burnin+1):nIter]), actRate)
 end
 
 function csmc(retained_particle, hmm::HMM, observations::Matrix{Float}, N::Int,
@@ -204,7 +212,8 @@ for ipm=1:2 #plus or minus
             c[1]*aux_sum)/tauv[ipm] + randn()/sqrt(tauv[ipm])
     if count > maxRejects
                     println(v_pm)                 
-      error("Seem to be stuck somewhere and rejecting lots of v+- proposals");
+      @warn "Seem to be stuck somewhere and rejecting lots of v+- proposals: rejecting proposal"
+      v_pm = [c[5], c[4]]
     end
   end
 end
@@ -242,7 +251,8 @@ function gibbsUpdateKappa(c::Array, x::Array, observations::Array;
     kappa = (prior_musd[1]/prior_musd[2]^2 + c[1]*aux_sum)/taukappa + randn()/sqrt(taukappa)
     if count > maxRejects
                 println(kappa)
-      error("Stuck somewhere with bad proposals for kappa")
+      @warn "Stuck somewhere with bad proposals for kappa: rejecting proposal" 
+      kappa = c[3]
     end
   end
   return kappa
@@ -276,7 +286,8 @@ function gibbsUpdateL(c::Array, x::Array, observations::Array;
     L = (prior_musd[1]/prior_musd[2]^2 + c[1]*c[3]*aux_sum)/tauL + randn()/sqrt(tauL)
     if count > maxRejects
                 println(L)
-      error("Stuck somewhere with bad proposals for L")
+      @warn "Stuck somewhere with bad proposals for L: rejecting proposal"
+      L = c[8]
     end
   end
   return L
@@ -311,7 +322,9 @@ function gibbsUpdateAlpha(c::Array, x::Array, observations::Array;
     alpha = (prior_musd[1]/prior_musd[2]^2 - c[1]*aux_sum)/tauAlpha + randn()/sqrt(tauAlpha)
     if count > maxRejects
                 println(alpha)
-      error("Stuck somewhere with bad proposals for alpha")
+      @warn "Stuck somewhere with bad proposals for alpha: rejecting proposal"
+      alpha = c[2]
+      break
     end
   end
   return alpha

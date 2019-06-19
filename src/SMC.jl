@@ -26,5 +26,6 @@ include("correlated.jl")
 include("likratio.jl")
 include("processjob.jl")
 include("anaphaseModel.jl")
+include("particlegibbs.jl")
 
 end # module

@@ -1,4 +1,5 @@
 using Distributions, Distributed
+using Statistics: cov
 
 export
     correlated,
@@ -12,7 +13,8 @@ function correlated(observations::Array, priors::Array,
          rho::Float=0.95, numIter::Int=1000, x0::Array=[0,1,0,0], N::Int=100,
          dt::Float=2.0, initialisationFn=nothing, printFreq::Int=1000,
          model::String="Simple",
-         resampler::Function=resample)
+         resampler::Function=resample,
+         burnin::Int=round(Int,numIter/10))
   #priors should be an array of distributions
 
   @assert length(priors) == dimParams
@@ -71,6 +73,15 @@ function correlated(observations::Array, priors::Array,
       c[:,i] = c[:,i-1]
       hiddenstates[:,i] = hiddenstates[:,i-1]
     end
+    if i==burnin
+      println("Burn in completed. Setting optimized proposal and beginning sampling...")
+      #adapt the parameter proposal distribution
+      covPilot = cov(transpose(c[:,1:burnin]))
+      scalingFactor = 2.56^2/dimParams #see Golightly et al 2017, Sherlock et al 2015
+      #set optimized Proposal
+      Sigma = nearestSPD(covPilot*scalingFactor) #ensure positive definite
+      paramProposal = x -> MvNormal(x,Sigma);
+    end
   end
   return (transpose(c), transpose(hiddenstates), acceptances/numIter)
 end
@@ -80,7 +91,8 @@ function noisyMCMC(observations::Array, priors::Array,
          rho::Float=0.95, numIter::Int=1000, x0::Array=[0,1,0,0], N::Int=100,
          dt::Float=2.0, initialisationFn=nothing, printFreq::Int=1000,
          model::String="Simple",
-         resampler::Function=resample)
+         resampler::Function=resample,
+         burnin::Int=round(Int,numIter/10))
   #priors should be an array of distributions
 
   @assert length(priors) == dimParams
@@ -135,6 +147,15 @@ function noisyMCMC(observations::Array, priors::Array,
       else 
       c[:,i] = c[:,i-1]
       hiddenstates[:,i] = hiddenstates[:,i-1]
+    end
+    if i==burnin
+      println("Burn in completed. Setting optimized proposal and beginning sampling...")
+      #adapt the parameter proposal distribution
+      covPilot = cov(transpose(c[:,1:burnin]))
+      scalingFactor = 2.56^2/dimParams #see Golightly et al 2017, Sherlock et al 2015
+      #set optimized Proposal
+      Sigma = nearestSPD(covPilot*scalingFactor) #ensure positive definite
+      paramProposal = x -> MvNormal(x,Sigma);
     end
   end
   return (transpose(c), transpose(hiddenstates), acceptances/numIter)
