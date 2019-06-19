@@ -107,7 +107,7 @@ end
 
 Multinomial resampling of a particles object `p`.
 """
-function multinomialresampling(p::Particles, M::Int=0, u=nothing)::Particles
+function multinomialresampling(p::Particles, M::Int=0, u=nothing)::Tuple{Particles,Array}
     #@assert isnothing(u) #passing randomness to multinomial resampling not currently implemented
     N    = length(p)
     M    = (M>0) ? M : N

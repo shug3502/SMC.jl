@@ -31,7 +31,7 @@ end
 
 function runFilter(theta::Array, u::Union{Array,Nothing}, observations::Array; x0::Array = [0, 1.0, 0, 0],
                    dt::Float=2.0, N::Int=100, filterMethod::String="Aux", model::String="Simple", resampler::Function=resample)
-  th, prop, hmm = constructProposal(theta, model, dt)
+  th, prop, hmm = constructProposal(theta, model, dt, filterMethod, x0)
   (psf, ancestors, ess, ev) = particlefilter(hmm, observations, N, prop,
                                   resampling=systematicresampling, u=u, resampler=resampler)
   #psw = particlesmoother_ffbs(hmm, psf)
@@ -83,8 +83,8 @@ function runCoupledFilter(theta1::Array, theta2::Array, u1::Union{Array,Nothing}
     error("Unknown filter method. Use Aux or Boot instead.")
   end
 =#
-th1, prop1, hmm1 = constructProposal(theta1, model, dt)
-th2, prop2, hmm2 = constructProposal(theta2, model, dt)
+th1, prop1, hmm1 = constructProposal(theta1, model, dt, filterMethod, x0)
+th2, prop2, hmm2 = constructProposal(theta2, model, dt, filterMethod, x0)
   (psf1, psf2, ancestors, ess, evdiff) = coupledparticlefilter(hmm1, hmm2, observations, N, prop1, prop2,
                                   resampling=systematicresampling, u1=u1, u2=u2, model=model, resampler=maxcouplingresample)
 #  psw = particlesmoother_ffbs(hmm2, psf2)
@@ -98,7 +98,7 @@ th2, prop2, hmm2 = constructProposal(theta2, model, dt)
   return (X_1toK, evdiff)
 end
 
-function constructProposal(theta::Array, model::String, dt::Float)
+function constructProposal(theta::Array, model::String, dt::Float, filterMethod::String, x0::Array)
   if model == "Simple"
     @assert length(theta) in [2 3 8]  #TODO: consider better way to provide defaults etc
     if length(theta) == 8
