@@ -128,8 +128,8 @@ function systematicresampling(p::Particles, M::Int=0, u=nothing)::Tuple{Particle
     M = (M>0) ? M : N
     Q = cumsum(p.w);
     if !isapprox(Q[N],1)
-#        println( "oops degenerate weights: $Q")
-        return Particles(p.x,ones(M)/M)
+        @debug "oops degenerate weights: $Q"
+        return Particles(p.x,ones(M)/M), zeros(Int, N)
     end
     T = [range(0,stop=1-1/N,length=N) .+ u/N; 1];
     i=1;

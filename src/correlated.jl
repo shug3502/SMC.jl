@@ -73,17 +73,22 @@ function correlated(observations::Array, priors::Array,
       c[:,i] = c[:,i-1]
       hiddenstates[:,i] = hiddenstates[:,i-1]
     end
-    if i==burnin
+    if (i==burnin)
+      if (acceptances > 0.001*burnin)
       println("Burn in completed. Setting optimized proposal and beginning sampling...")
       #adapt the parameter proposal distribution
       covPilot = cov(transpose(c[:,1:burnin]))
       scalingFactor = 2.56^2/dimParams #see Golightly et al 2017, Sherlock et al 2015
       #set optimized Proposal
       Sigma = nearestSPD(covPilot*scalingFactor) #ensure positive definite
+      println(diag(Sigma))
       paramProposal = x -> MvNormal(x,Sigma);
+      else
+      @warn "Insufficient acceptances to optimize proposal properly. Skipping adaption."
+      end
     end
   end
-  return (transpose(c), transpose(hiddenstates), acceptances/numIter)
+  return (transpose(c[:,(burnin+1):numIter]), transpose(hiddenstates[:,(burnin+1):numIter]), acceptances/numIter)
 end
 
 function noisyMCMC(observations::Array, priors::Array,
@@ -155,9 +160,10 @@ function noisyMCMC(observations::Array, priors::Array,
       scalingFactor = 2.56^2/dimParams #see Golightly et al 2017, Sherlock et al 2015
       #set optimized Proposal
       Sigma = nearestSPD(covPilot*scalingFactor) #ensure positive definite
+      println(diag(Sigma))
       paramProposal = x -> MvNormal(x,Sigma);
     end
   end
-  return (transpose(c), transpose(hiddenstates), acceptances/numIter)
+  return (transpose(c[:,(burnin+1):numIter]), transpose(hiddenstates[:,(burnin+1):numIter]), acceptances/numIter)
 end
 

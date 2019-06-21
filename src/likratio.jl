@@ -86,7 +86,7 @@ function runCoupledFilter(theta1::Array, theta2::Array, u1::Union{Array,Nothing}
 th1, prop1, hmm1 = constructProposal(theta1, model, dt, filterMethod, x0)
 th2, prop2, hmm2 = constructProposal(theta2, model, dt, filterMethod, x0)
   (psf1, psf2, ancestors, ess, evdiff) = coupledparticlefilter(hmm1, hmm2, observations, N, prop1, prop2,
-                                  resampling=systematicresampling, u1=u1, u2=u2, model=model, resampler=maxcouplingresample)
+                                  resampling=systematicresampling, u1=u1, u2=u2, resampler=maxcouplingresample)
 #  psw = particlesmoother_ffbs(hmm2, psf2)
   psw = deepcopy(psf2)
   K = length(psw)

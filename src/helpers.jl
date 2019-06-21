@@ -1,10 +1,16 @@
-using LinearAlgebra, DataFrames, Gadfly
+using LinearAlgebra, DataFrames, Gadfly, MCMCChains, StatsBase
 
 export eye,
        nearestSPD,
        extractOutput,
        proportion_of_js,
-       plotHiddenStates
+       plotHiddenStates,
+       plotObsOnly,
+       plotObsAndStates,
+       convertStatesToProportions,
+       report_min_ess,
+       computePerformanceMetrics,
+       combineChains
 
 function eye(m::Integer)
     #shortcut to avoid lots of renaming
@@ -79,7 +85,7 @@ function extractOutput(out::Array; dimParams::Int=8,nChains::Int=6,K::Int=100)
         c[:,:,i] = cTemp[i]
         hiddenStates[range((i-1)*nIter_minusburnin+1,stop=i*nIter_minusburnin,step=1),:] = hiddenStatesTemp[i]
     end
-    return c, hiddenStates
+    return c, hiddenStates, actRate
 end
 
 ####################
@@ -92,6 +98,7 @@ end
 #####################
 
 function plotHiddenStates(states::Array; dt::Float=2.0)
+#this is just for states on their own
     dimx = size(states,1)
     K = size(states,2)
     dfStates = DataFrame(transpose(states));
@@ -108,6 +115,7 @@ end
 
 function plotObsAndStates(observations::Array,states::Array; dt::Float=2.0)
     dimx = size(states,1)
+    K = size(states,2)
     dfObs = DataFrame(transpose(observations));
     dfStates = DataFrame(transpose(states));
     names!(dfObs, [Symbol("sister$i") for i in 1:2]) #change columns names, see https://stackoverflow.com/questions/21559683/how-do-you-change-multiple-column-names-in-a-julia-version-0-3-dataframe
@@ -116,9 +124,71 @@ function plotObsAndStates(observations::Array,states::Array; dt::Float=2.0)
     dfT = DataFrame(time = dt*collect(1:K));
     df = [dfT dfObs dfStates]
     df = stack(df,[:sister1, :sister2], variable_name=Symbol("sisterID"),value_name=Symbol("position")) #reshape from wide to long
-    df = stack(df, 4:(3+hmm.dimx), variable_name=Symbol("state"), value_name=Symbol("present"))
+    df = stack(df, 4:(3+dimx), variable_name=Symbol("state"), value_name=Symbol("present"))
     p1 = plot(df, x="time",y = "position", color="sisterID", Geom.line)
     p2 = plot(df, x="time",y = "present", color="state", Geom.line)
     return hstack(p1,p2)
 end
 
+#####################
+
+function plotObsOnly(observations::Array, dt::Float=2.0)
+    K = size(observations,2)
+    dfObs = DataFrame(transpose(observations));
+    names!(dfObs, [Symbol("sister$i") for i in 1:2]) #change columns names, see https://stackoverflow.com/questions/21559683/how-do-you-change-multiple-column-names-in-a-julia-version-0-3-dataframe
+    dfT = DataFrame(time = dt*collect(1:K));
+    df = [dfT dfObs]
+    df = stack(df,[:sister1, :sister2], variable_name=Symbol("sisterID"),value_name=Symbol("position")) #reshape from wide to long
+    p = Gadfly.plot(df, x="time",y = "position", color="sisterID", Geom.line)
+    return p
+end
+
+###################
+
+function convertStatesToProportions(states::Array, dt::Float=2.0)
+# count proportion of MCMC iterations for each hidden state at given time for plotting
+K = size(states,2)
+dimx = maximum(states)
+@assert dimx >= 4
+stateProportions = zeros(dimx,K)
+for j=1:dimx
+  stateProportions[j,:] = mapslices(x -> proportion_of_js(x,j),states,dims=1)
+end
+return stateProportions
+end
+
+##################
+
+function report_min_ess(c::Array, paramNames::Array)
+    chn=Chains(c, paramNames, start=1);
+    Rhat = gelmandiag(chn)
+    println(Rhat)
+    return minimum(ess(chn)[:,:ess])
+end
+
+#################
+
+function computePerformanceMetrics(inferredTh,inferredStates,realTh,realStates)
+    numIter = size(inferredTh,1)
+    K = size(inferredStates,2)
+    proportionCorrect = zeros(numIter)
+    mse = zeros(numIter)
+    for i=1:numIter
+        proportionCorrect[i] = counteq(inferredStates[i,:],realStates)/K
+        mse[i] = L2dist(inferredTh[i,:]./realTh, ones(size(realTh)))
+    end
+    return sum(proportionCorrect)/numIter, sum(mse)/numIter
+end
+
+###################
+
+function combineChains(c)
+   sx, sy, sz = size(c)
+    # Create a "result matrix" with the same number of columns, but no lines
+    cCombined = similar(c, 0, sy)
+    # For each layer, concatenate the layer verticaly with the "result matrix"
+    for i in 1:sz
+        cCombined = vcat(cCombined, c[:,:,sz])
+    end
+    return cCombined
+end
