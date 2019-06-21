@@ -174,9 +174,10 @@ function computePerformanceMetrics(inferredTh,inferredStates,realTh,realStates)
     proportionCorrect = zeros(numIter)
     mse = zeros(numIter)
     for i=1:numIter
-        proportionCorrect[i] = counteq(inferredStates[i,:],realStates)/K
+#        proportionCorrect[i] = counteq(inferredStates[i,:],realStates)/K
         mse[i] = L2dist(inferredTh[i,:]./realTh, ones(size(realTh)))
     end
+proportionCorrect = counteq(mapslices(modes, inferredStates, dims=1),realStates)*numIter/K
     return sum(proportionCorrect)/numIter, sum(mse)/numIter
 end
 
@@ -192,3 +193,33 @@ function combineChains(c)
     end
     return cCombined
 end
+
+###################
+
+function modes(values)
+    dict = Dict() # Values => Number of repetitions
+    modesArray = typeof(values[1])[] # Array of the modes so far
+    max = 0 # Max of repetitions so far
+ 
+    for v in values
+        # Add one to the dict[v] entry (create one if none)
+        if v in keys(dict)
+            dict[v] += 1
+        else
+            dict[v] = 1
+        end
+ 
+        # Update modesArray if the number of repetitions
+        # of v reaches or surpasses the max value
+        if dict[v] >= max
+            if dict[v] > max
+                empty!(modesArray)
+                max += 1
+            end
+            append!(modesArray, [v])
+        end
+    end
+ 
+    return modesArray
+end
+ 
